@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -77,6 +78,19 @@ type Book struct {
 		Main       string `json:"main,omitempty"`
 		Subtitle   string `json:"subtitle,omitempty"`
 	} `json:"title,omitempty"`
+}
+
+type Process struct {
+	Title  string
+	Source string
+	Output string
+	Start  int
+	End    int
+}
+
+func (p Process) ToString() string {
+	// return a string representation of the Process struct
+	return fmt.Sprintf("Source: %s, Title: %s, Start: %d, End: %d", p.Source, p.Title, p.Start, p.End)
 }
 
 func GetFileNameAndSeconds(path string) (string, int) {
