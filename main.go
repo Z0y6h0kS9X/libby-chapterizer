@@ -154,7 +154,17 @@ func main() {
 		// Adds the title, start time, and output path
 		process.Title = toc.Title
 		process.Start = seconds
-		process.Output = path.Join(outputPath, toc.Title+".mp3")
+
+		outputFileNormal := strings.Map(func(r rune) rune {
+			switch {
+			case r == '<' || r == '>' || r == ':' || r == '"' || r == '/' || r == '\\' || r == '|' || r == '?' || r == '*':
+				return '-'
+			default:
+				return r
+			}
+		}, toc.Title)
+
+		process.Output = path.Join(outputPath, outputFileNormal+".mp3")
 
 		// // Adds the command
 		// if process.End != 0 {
@@ -185,8 +195,8 @@ func main() {
 	for _, process := range ProcessBlock {
 
 		_, file := path.Split(process.Output)
-		title := strings.Replace(file, ".mp3", "", -1)
-		fmt.Println("Processing Chapter:", title)
+		// title := strings.Replace(file, ".mp3", "", -1)
+		fmt.Println("Processing Chapter:", process.Title)
 
 		if process.End != 0 {
 
@@ -217,7 +227,7 @@ func main() {
 
 		}
 
-		m3u = append(m3u, fmt.Sprintf("#EXTINF:,%s\n%s", title, file))
+		m3u = append(m3u, fmt.Sprintf("#EXTINF:,%s\n%s", process.Title, file))
 
 	}
 
