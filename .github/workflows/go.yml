@@ -26,7 +26,7 @@ jobs:
         go-version: ${{ matrix.go-version }}
 
     - name: Build for ${{ matrix.os }}
-      run: GOOS=$(echo ${{ matrix.os }} | tr '[:lower:]' '[:upper:]') go build -o libby-chapterizer_${{ matrix.os }}
+      run: GOOS=$(echo ${{ matrix.os }}) go build -o libby-chapterizer_${{ matrix.os }}
 
     - name: Archive artifact
       uses: actions/upload-artifact@v2
