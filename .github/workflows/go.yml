@@ -40,7 +40,7 @@ jobs:
             GOOS=linux GOARCH=amd64 go build -o ./build/libby-chapterizer_linux
             chmod +x ./build/libby-chapterizer_linux
             ;;
-          'darwin')
+          'macos')
             GOOS=darwin GOARCH=amd64 go build -o ./build/libby-chapterizer_macos
             chmod +x ./build/libby-chapterizer_macos
             ;;
@@ -50,13 +50,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: libby-chapterizer
-        path: build
-
-    # - name: Save binary
-    #   run: mv libby-chapterizer_${{ matrix.os }} $GITHUB_WORKSPACE/libby-chapterizer_${{ matrix.os }}
-
-    # - name: Upload binary
-    #   uses: actions/upload-artifact@v2
-    #   with:
-    #     name: libby-chapterizer_${{ matrix.os }}
-    #     path: $GITHUB_WORKSPACE/libby-chapterizer_${{ matrix.os }}
+        path: build/*
