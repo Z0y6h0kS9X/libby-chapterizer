@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         go-version: ['1.21.3']  # Change to your desired Go version
-        os: [linux, darwin, windows]
+        os: [linux, macos, windows]
 
     steps:
     - name: Checkout code
@@ -27,7 +27,6 @@ jobs:
 
     - name: Build for ${{ matrix.os }}
       run: |
-        # GOOS=$(echo ${{ matrix.os }}) go build -o libby-chapterizer_${{ matrix.os }}
         case ${{ matrix.os }} in
           'windows')
             GOOS=windows GOARCH=amd64 go build -o ./libby-chapterizer_windows.exe
