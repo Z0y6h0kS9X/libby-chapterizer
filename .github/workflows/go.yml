@@ -34,11 +34,11 @@ jobs:
         name: libby-chapterizer_${{ matrix.os }}
         path: ./libby-chapterizer_${{ matrix.os }}
 
-    - name: Save binary
-      run: mv libby-chapterizer_${{ matrix.os }} $GITHUB_WORKSPACE/libby-chapterizer_${{ matrix.os }}
+    # - name: Save binary
+    #   run: mv libby-chapterizer_${{ matrix.os }} $GITHUB_WORKSPACE/libby-chapterizer_${{ matrix.os }}
 
-    - name: Upload binary
-      uses: actions/upload-artifact@v2
-      with:
-        name: libby-chapterizer_${{ matrix.os }}
-        path: $GITHUB_WORKSPACE/libby-chapterizer_${{ matrix.os }}
+    # - name: Upload binary
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: libby-chapterizer_${{ matrix.os }}
+    #     path: $GITHUB_WORKSPACE/libby-chapterizer_${{ matrix.os }}
