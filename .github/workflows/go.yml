@@ -26,7 +26,21 @@ jobs:
         go-version: ${{ matrix.go-version }}
 
     - name: Build for ${{ matrix.os }}
-      run: GOOS=$(echo ${{ matrix.os }}) go build -o libby-chapterizer_${{ matrix.os }}
+      run: |
+        # GOOS=$(echo ${{ matrix.os }}) go build -o libby-chapterizer_${{ matrix.os }}
+        case ${{ matrix.os }} in
+          'windows')
+            GOOS=windows GOARCH=amd64 go build -o libby-chapterizer_windows.exe .
+            ;;
+          'linux')
+            GOOS=linux GOARCH=amd64 go build -o libby-chapterizer_linux .
+            chmod +x libby-chapterizer_linux
+            ;;
+          'darwin')
+            GOOS=darwin GOARCH=amd64 go build -o libby-chapterizer_macos .
+            chmod +x libby-chapterizer_macos
+            ;;
+        esac
 
     - name: Archive artifact
       uses: actions/upload-artifact@v2
