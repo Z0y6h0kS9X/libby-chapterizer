@@ -18,15 +18,20 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Set up Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v4
       with:
         go-version: ${{ matrix.go-version }}
 
     - name: Build for ${{ matrix.os }}
       run: |
+
+        if [ ! -d "build" ]; then
+          mkdri build
+        fi
+        
         case ${{ matrix.os }} in
           'windows')
             GOOS=windows GOARCH=amd64 go build -o ./libby-chapterizer_windows.exe
@@ -42,10 +47,10 @@ jobs:
         esac
 
     - name: Archive artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
-        name: libby-chapterizer_${{ matrix.os }}
-        path: ./libby-chapterizer_${{ matrix.os }}
+        name: libby-chapterizer
+        path: build
 
     # - name: Save binary
     #   run: mv libby-chapterizer_${{ matrix.os }} $GITHUB_WORKSPACE/libby-chapterizer_${{ matrix.os }}
