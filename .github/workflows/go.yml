@@ -29,7 +29,7 @@ jobs:
       run: |
 
         if [ ! -d "build" ]; then
-          mkdri build
+          mkdir build
         fi
         
         case ${{ matrix.os }} in
