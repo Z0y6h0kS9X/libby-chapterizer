@@ -34,14 +34,14 @@ jobs:
         
         case ${{ matrix.os }} in
           'windows')
-            GOOS=windows GOARCH=amd64 go build -o ./build/libby-chapterizer_windows.exe
+            GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o ./build/libby-chapterizer_windows.exe
             ;;
           'linux')
-            GOOS=linux GOARCH=amd64 go build -o ./build/libby-chapterizer_linux
+            GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o ./build/libby-chapterizer_linux
             chmod +x ./build/libby-chapterizer_linux
             ;;
           'macos')
-            GOOS=darwin GOARCH=amd64 go build -o ./build/libby-chapterizer_macos
+            GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o ./build/libby-chapterizer_macos
             chmod +x ./build/libby-chapterizer_macos
             ;;
         esac
