@@ -29,20 +29,20 @@ jobs:
       run: |
 
         if [ ! -d "build" ]; then
-          mkdir build
+          mkdir ./build
         fi
         
         case ${{ matrix.os }} in
           'windows')
-            GOOS=windows GOARCH=amd64 go build -o ./libby-chapterizer_windows.exe
+            GOOS=windows GOARCH=amd64 go build -o ./build/libby-chapterizer_windows.exe
             ;;
           'linux')
-            GOOS=linux GOARCH=amd64 go build -o ./libby-chapterizer_linux
-            chmod +x libby-chapterizer_linux
+            GOOS=linux GOARCH=amd64 go build -o ./build/libby-chapterizer_linux
+            chmod +x ./build/libby-chapterizer_linux
             ;;
           'darwin')
-            GOOS=darwin GOARCH=amd64 go build -o ./libby-chapterizer_macos
-            chmod +x libby-chapterizer_macos
+            GOOS=darwin GOARCH=amd64 go build -o ./build/libby-chapterizer_macos
+            chmod +x ./build/libby-chapterizer_macos
             ;;
         esac
 
