@@ -8,7 +8,9 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -74,11 +76,6 @@ func main() {
 	authorString := strings.Join(authors, ", ")
 	narratorString := strings.Join(narrators, ", ")
 
-	fmt.Println("Title:", book.Title.Main)
-	fmt.Println("Series:", book.Title.Collection)
-	fmt.Println("Author:", authorString)
-	fmt.Println("Narrator:", narratorString)
-
 	// Gets the directory path from the json path
 	var fileDir string
 	if strings.Contains(jsonPath, "/") {
@@ -117,6 +114,39 @@ func main() {
 			mp3Files = append(mp3Files, path.Join(fileDir, file.Name()))
 		}
 	}
+
+	// $end = ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $file.FullName
+
+	totalDuration := 0.0
+	for _, mp3File := range mp3Files {
+		cmd := exec.Command("ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", mp3File)
+		stdout, err := cmd.Output()
+		if err != nil {
+			fmt.Println("Error running ffprobe command:", err)
+			continue
+		}
+		durationStr := strings.TrimSpace(string(stdout))
+		duration, err := strconv.ParseFloat(durationStr, 64)
+		if err != nil {
+			fmt.Println("Error parsing duration:", err)
+			continue
+		}
+		totalDuration += duration
+	}
+
+	lengthRaw := time.Duration(totalDuration) * time.Second
+	length := fmt.Sprintf("%02d:%02d:%02d.%03d",
+		int(lengthRaw.Hours()),
+		int(lengthRaw.Minutes())%60,
+		int(lengthRaw.Seconds())%60,
+		int(lengthRaw.Milliseconds())%1000)
+
+	fmt.Println("Title:", book.Title.Main)
+	fmt.Println("Series:", book.Title.Collection)
+	fmt.Println("Author:", authorString)
+	fmt.Println("Narrator:", narratorString)
+	fmt.Println("Duration:", length)
+	fmt.Println("============================")
 
 	var ProcessBlock []p.Process
 
@@ -201,9 +231,11 @@ func main() {
 		if process.End != 0 {
 
 			cmd := exec.Command("ffmpeg",
-				"-ss", fmt.Sprintf("%d", process.Start), "-i",
-				process.Source, "-acodec", "copy",
-				"-to", fmt.Sprintf("%d", process.End), process.Output,
+				"-i", process.Source,
+				"-ss", fmt.Sprintf("%d", process.Start),
+				"-acodec", "copy",
+				"-to", fmt.Sprintf("%d", process.End),
+				process.Output,
 				"-hide_banner", "-loglevel", "error")
 
 			err := cmd.Run()
