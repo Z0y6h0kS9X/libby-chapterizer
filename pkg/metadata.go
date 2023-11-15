@@ -2,8 +2,6 @@ package pkg
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -84,27 +82,11 @@ type Process struct {
 	Title  string
 	Source string
 	Output string
-	Start  int
-	End    int
+	Start  float64
+	End    float64
 }
 
 func (p Process) ToString() string {
 	// return a string representation of the Process struct
-	return fmt.Sprintf("Source: %s, Title: %s, Start: %d, End: %d", p.Source, p.Title, p.Start, p.End)
-}
-
-func GetFileNameAndSeconds(path string) (string, int) {
-
-	var seconds int
-
-	part := strings.Split(path, "Fmt425-")[1]
-	// Splits the path on "#" to enumerate the seconds (if applicable) and match to the file paths above
-	if strings.Contains(part, "#") {
-		result := strings.Split(part, "#")
-		part = result[0]
-		seconds, _ = strconv.Atoi(result[1])
-	}
-
-	return part, seconds
-
+	return fmt.Sprintf("Source: %s, Title: %s, Start: %f, End: %f", p.Source, p.Title, p.Start, p.End)
 }
