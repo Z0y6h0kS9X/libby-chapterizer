@@ -8,9 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -21,7 +19,7 @@ var rootCmd = &cobra.Command{
 	Long:  "A longer description of your application",
 	Run: func(cmd *cobra.Command, args []string) {
 		// This function will be executed when your application is run
-		fmt.Println("Hello, World!")
+		// fmt.Println("Hello, World!")
 	},
 }
 
@@ -34,7 +32,7 @@ func init() {
 }
 
 func main() {
-	fmt.Println("Hello, World!")
+	// fmt.Println("Hello, World!")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -98,8 +96,6 @@ func main() {
 	// Adds the first author, series name, and title to the path
 	outputPath := path.Join(outDir, authors[0], book.Title.Collection, book.Title.Main)
 
-	// fmt.Println("Directory:", fileDir)
-
 	// Gets a list of all the .mp3 files in the fileDir
 	files, err := os.ReadDir(fileDir)
 	if err != nil {
@@ -107,45 +103,33 @@ func main() {
 		return
 	}
 
-	var mp3Files []string
+	mp3FileMap := make(map[string]string)
+	// var mp3Files []string
+	totalDuration := 0.000
+
 	for _, file := range files {
 		if path.Ext(file.Name()) == ".mp3" {
-			// fmt.Println(path.Join(fileDir, file.Name()))
-			mp3Files = append(mp3Files, path.Join(fileDir, file.Name()))
+
+			fullPath := path.Join(fileDir, file.Name())
+			// mp3Files = append(mp3Files, fullPath)
+			part := p.GetPartFromMp3File(fullPath)
+			mp3FileMap[part] = fullPath
+
+			duration := p.GetFileDuration(fullPath)
+			totalDuration += duration
 		}
 	}
 
-	// $end = ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $file.FullName
+	duration := p.GetDurationFormatted(totalDuration)
 
-	totalDuration := 0.0
-	for _, mp3File := range mp3Files {
-		cmd := exec.Command("ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", mp3File)
-		stdout, err := cmd.Output()
-		if err != nil {
-			fmt.Println("Error running ffprobe command:", err)
-			continue
-		}
-		durationStr := strings.TrimSpace(string(stdout))
-		duration, err := strconv.ParseFloat(durationStr, 64)
-		if err != nil {
-			fmt.Println("Error parsing duration:", err)
-			continue
-		}
-		totalDuration += duration
-	}
-
-	lengthRaw := time.Duration(totalDuration) * time.Second
-	length := fmt.Sprintf("%02d:%02d:%02d.%03d",
-		int(lengthRaw.Hours()),
-		int(lengthRaw.Minutes())%60,
-		int(lengthRaw.Seconds())%60,
-		int(lengthRaw.Milliseconds())%1000)
-
+	fmt.Println("============================")
+	fmt.Println("Audiobook Information")
+	fmt.Println("----------------------------")
 	fmt.Println("Title:", book.Title.Main)
 	fmt.Println("Series:", book.Title.Collection)
 	fmt.Println("Author:", authorString)
 	fmt.Println("Narrator:", narratorString)
-	fmt.Println("Duration:", length)
+	fmt.Println("Duration:", duration)
 	fmt.Println("============================")
 
 	var ProcessBlock []p.Process
@@ -160,24 +144,27 @@ func main() {
 		toc := book.Nav.Toc[i]
 		part, seconds := p.GetFileNameAndSeconds(toc.Path)
 
-		// Iterates through the mp3Files array and checks if it matches part
-		for _, mp3File := range mp3Files {
-			if strings.Contains(mp3File, part) {
-				process.Source = mp3File
-				continue
-			}
+		// Lookup the mp3File directly using a map
+		if mp3File, ok := mp3FileMap[part]; ok {
+			process.Source = mp3File
+		} else {
+			fmt.Println("Part not found:", part)
+			os.Exit(1)
 		}
 
 		// Gets the next file in the mp3Files array and checks if it matches the path of the toc
 		if i < len(book.Nav.Toc)-1 {
 			toc2 := book.Nav.Toc[i+1]
-			part2, seconds2 := p.GetFileNameAndSeconds(toc2.Path)
+			_, seconds2 := p.GetFileNameAndSeconds(toc2.Path)
 
-			if part == part2 {
-
-				process.End = seconds2
-
+			if seconds2 == 0 {
+				seconds2 = p.GetFileDuration(process.Source)
 			}
+
+			process.End = seconds2
+		} else if i == len(book.Nav.Toc)-1 {
+
+			process.End = p.GetFileDuration(process.Source)
 
 		}
 
@@ -194,15 +181,10 @@ func main() {
 			}
 		}, toc.Title)
 
-		process.Output = path.Join(outputPath, outputFileNormal+".mp3")
+		iteration := fmt.Sprintf("%02d", i)
 
-		// // Adds the command
-		// if process.End != 0 {
-		// 	// No endtime specified, just start on starttime and go to end of file
-		// 	process.CommandArgs = fmt.Sprintf("-ss %d -i '%s' -acodec copy -to %d '%s' -hide_banner -loglevel error", process.Start, process.Source, process.End, process.Output)
-		// } else {
-		// 	process.CommandArgs = fmt.Sprintf("-ss %d -i '%s' -acodec copy '%s' -hide_banner -loglevel error", process.Start, process.Source, process.Output)
-		// }
+		// Sets the output path
+		process.Output = path.Join(outputPath, "["+iteration+"]. "+outputFileNormal+".mp3")
 
 		// Adds the process to the ProcessBlock
 		ProcessBlock = append(ProcessBlock, process)
@@ -226,37 +208,22 @@ func main() {
 
 		_, file := path.Split(process.Output)
 		// title := strings.Replace(file, ".mp3", "", -1)
-		fmt.Println("Processing Chapter:", process.Title)
+		durationSeconds := process.End - process.Start
+		duration := p.GetDurationFormatted(durationSeconds)
+		fmt.Printf("Processing Chapter: %s (%s)\n", process.Title, duration)
 
-		if process.End != 0 {
+		cmd := exec.Command("ffmpeg",
+			"-i", process.Source,
+			"-ss", fmt.Sprintf("%f", process.Start),
+			"-to", fmt.Sprintf("%f", process.End),
+			"-acodec", "copy",
+			process.Output,
+			"-hide_banner", "-loglevel", "error")
 
-			cmd := exec.Command("ffmpeg",
-				"-i", process.Source,
-				"-ss", fmt.Sprintf("%d", process.Start),
-				"-acodec", "copy",
-				"-to", fmt.Sprintf("%d", process.End),
-				process.Output,
-				"-hide_banner", "-loglevel", "error")
-
-			err := cmd.Run()
-			if err != nil {
-				fmt.Println("Error:", err)
-				return
-			}
-
-		} else {
-
-			cmd := exec.Command("ffmpeg",
-				"-ss", fmt.Sprintf("%d", process.Start), "-i",
-				process.Source, "-acodec", "copy",
-				process.Output, "-hide_banner", "-loglevel", "error")
-
-			err := cmd.Run()
-			if err != nil {
-				fmt.Println("Error:", err)
-				return
-			}
-
+		err := cmd.Run()
+		if err != nil {
+			fmt.Println("Error:", err)
+			return
 		}
 
 		m3u = append(m3u, fmt.Sprintf("#EXTINF:,%s\n%s", process.Title, file))
