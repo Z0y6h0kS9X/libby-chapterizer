@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type Book struct {
+type Openbook struct {
 	Cover struct {
 		Front struct {
 			MediaType              string    `json:"media-type,omitempty"`
@@ -76,6 +76,56 @@ type Book struct {
 		Main       string `json:"main,omitempty"`
 		Subtitle   string `json:"subtitle,omitempty"`
 	} `json:"title,omitempty"`
+}
+
+type BookDetails struct {
+	Asin    string `json:"asin,omitempty"`
+	Authors []struct {
+		Asin string `json:"asin,omitempty"`
+		Name string `json:"name,omitempty"`
+	} `json:"authors,omitempty"`
+	Description string `json:"description,omitempty"`
+	FormatType  string `json:"formatType,omitempty"`
+	Genres      []struct {
+		Asin string `json:"asin,omitempty"`
+		Name string `json:"name,omitempty"`
+		Type string `json:"type,omitempty"`
+	} `json:"genres,omitempty"`
+	Image     string `json:"image,omitempty"`
+	IsAdult   bool   `json:"isAdult,omitempty"`
+	Language  string `json:"language,omitempty"`
+	Narrators []struct {
+		Name string `json:"name,omitempty"`
+	} `json:"narrators,omitempty"`
+	PublisherName    string    `json:"publisherName,omitempty"`
+	Rating           string    `json:"rating,omitempty"`
+	Region           string    `json:"region,omitempty"`
+	ReleaseDate      time.Time `json:"releaseDate,omitempty"`
+	RuntimeLengthMin int       `json:"runtimeLengthMin,omitempty"`
+	SeriesPrimary    struct {
+		Asin     string `json:"asin,omitempty"`
+		Name     string `json:"name,omitempty"`
+		Position string `json:"position,omitempty"`
+	} `json:"seriesPrimary,omitempty"`
+	Subtitle string `json:"subtitle,omitempty"`
+	Summary  string `json:"summary,omitempty"`
+	Title    string `json:"title,omitempty"`
+}
+
+type Chapters struct {
+	Asin                 string `json:"asin,omitempty"`
+	BrandIntroDurationMs int    `json:"brandIntroDurationMs,omitempty"`
+	BrandOutroDurationMs int    `json:"brandOutroDurationMs,omitempty"`
+	Chapters             []struct {
+		LengthMs       int    `json:"lengthMs,omitempty"`
+		StartOffsetMs  int    `json:"startOffsetMs,omitempty"`
+		StartOffsetSec int    `json:"startOffsetSec,omitempty"`
+		Title          string `json:"title,omitempty"`
+	} `json:"chapters,omitempty"`
+	IsAccurate       bool   `json:"isAccurate,omitempty"`
+	Region           string `json:"region,omitempty"`
+	RuntimeLengthMs  int    `json:"runtimeLengthMs,omitempty"`
+	RuntimeLengthSec int    `json:"runtimeLengthSec,omitempty"`
 }
 
 type Process struct {

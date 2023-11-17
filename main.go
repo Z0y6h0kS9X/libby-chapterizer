@@ -2,6 +2,7 @@ package main
 
 import (
 	p "Z0y6h0kS9X/libby-chapterizer/pkg"
+	prov "Z0y6h0kS9X/libby-chapterizer/provider"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -25,10 +26,12 @@ var rootCmd = &cobra.Command{
 
 var jsonPath string
 var outPath string
+var test bool
 
 func init() {
 	rootCmd.Flags().StringVarP(&jsonPath, "json", "j", "", "The path to the openbook.json file")
 	rootCmd.Flags().StringVarP(&outPath, "out", "o", "", "The path to the directory you want to output the files to")
+	rootCmd.Flags().BoolVarP(&test, "test", "t", false, "Test mode")
 }
 
 func main() {
@@ -53,7 +56,7 @@ func main() {
 		return
 	}
 
-	var book p.Book
+	var book p.Openbook
 	err = json.Unmarshal(data, &book)
 	if err != nil {
 		fmt.Println("Error unmarshalling JSON:", err)
@@ -131,6 +134,35 @@ func main() {
 	fmt.Println("Narrator:", narratorString)
 	fmt.Println("Duration:", duration)
 	fmt.Println("============================")
+
+	if test {
+		fmt.Println("Looking up Book on Audible!")
+		asin, err := prov.GetBook(book.Title.Main, authorString, narratorString)
+		if err != nil {
+			fmt.Println("Error getting book:", err)
+			return
+		}
+
+		fmt.Println("ASIN:", asin)
+
+		details, err := prov.GetBookDetails(asin)
+		if err != nil {
+			fmt.Println("Error getting book details:", err)
+			return
+		}
+
+		fmt.Printf("Book %s in the %s series\n", details.SeriesPrimary.Position, details.SeriesPrimary.Name)
+
+		chapters, err := prov.GetChapters(asin)
+		if err != nil {
+			fmt.Println("Error getting chapters:", err)
+			return
+		}
+
+		fmt.Println("Chapters:", len(chapters.Chapters))
+
+		os.Exit(0)
+	}
 
 	var ProcessBlock []p.Process
 
