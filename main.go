@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -86,6 +87,20 @@ func main() {
 		fileDir = path.Dir(jsonPath)
 	}
 
+	// Gets the ASIN
+	asin, err := prov.GetBook(book.Title.Main, authorString, narratorString)
+	if err != nil {
+		fmt.Println("Error getting book:", err)
+		return
+	}
+
+	// Gets the book details
+	details, err := prov.GetBookDetails(asin)
+	if err != nil {
+		fmt.Println("Error getting book details:", err)
+		return
+	}
+
 	// Gets the path
 	var outDir string
 
@@ -97,7 +112,22 @@ func main() {
 	}
 
 	// Adds the first author, series name, and title to the path
-	outputPath := path.Join(outDir, authors[0], book.Title.Collection, book.Title.Main)
+	outName := book.Title.Main
+	if asin != "" {
+		outName = outName + " (" + asin + ")"
+	}
+
+	if details.SeriesPrimary.Name != "" {
+		floatNumber, err := strconv.ParseFloat(details.SeriesPrimary.Position, 64)
+		if err != nil {
+			fmt.Println("Error parsing float:", err)
+			return
+		}
+		padded := fmt.Sprintf("%04.1f", floatNumber)
+		outName = "[" + padded + "]. " + outName
+	}
+
+	outputPath := path.Join(outDir, authors[0], book.Title.Collection, outName)
 
 	// Gets a list of all the .mp3 files in the fileDir
 	files, err := os.ReadDir(fileDir)
@@ -129,7 +159,11 @@ func main() {
 	fmt.Println("Audiobook Information")
 	fmt.Println("----------------------------")
 	fmt.Println("Title:", book.Title.Main)
-	fmt.Println("Series:", book.Title.Collection)
+	fmt.Println("ASIN:", asin)
+	if details.SeriesPrimary.Name != "" {
+		fmt.Println("Series:", details.SeriesPrimary.Name)
+		fmt.Println("Book Number:", details.SeriesPrimary.Position)
+	}
 	fmt.Println("Author:", authorString)
 	fmt.Println("Narrator:", narratorString)
 	fmt.Println("Duration:", duration)
