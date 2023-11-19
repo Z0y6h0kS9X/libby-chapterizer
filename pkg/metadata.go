@@ -135,7 +135,8 @@ type Process struct {
 	Output   string
 	Start    float64
 	End      float64
-	Override *exec.Cmd
+	Duration string
+	Command  *exec.Cmd
 }
 
 func (p Process) ToString() string {

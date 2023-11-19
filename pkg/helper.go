@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func GetDurationFormatted(seconds float64) string {
+func formatDuration(seconds float64) string {
 
 	lengthRaw := time.Duration(seconds) * time.Second
 	length := fmt.Sprintf("%02d:%02d:%02d.%03d",
@@ -21,6 +21,10 @@ func GetDurationFormatted(seconds float64) string {
 
 	return length
 
+}
+
+func GetDuraion(file1, file2 string, file1Start, file2End float64) string {
+	return "not implemented"
 }
 
 func GetFileNameAndSeconds(path string) (string, float64) {

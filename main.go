@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path"
 	"strconv"
 	"strings"
@@ -173,66 +172,10 @@ func main() {
 	fmt.Println("Duration:", duration)
 	fmt.Println("============================")
 
-	// if test {
-
-	// 	fmt.Println("Testing...")
-	// 	// "F:\Music\Audiobook\Testing\origin_full.mp3"
-	// 	// testFile := "F:\\Music\\Audiobook\\Testing\\origin_full.mp3"
-
-	// 	asin, err := prov.GetBook(book.Title.Main, authorString, narratorString)
-	// 	if err != nil {
-	// 		fmt.Println("Error getting book:", err)
-	// 		return
-	// 	}
-
-	// 	// fmt.Println("ASIN:", asin)
-
-	// 	// details, err := prov.GetBookDetails(asin)
-	// 	// if err != nil {
-	// 	// 	fmt.Println("Error getting book details:", err)
-	// 	// 	return
-	// 	// }
-
-	// 	// fmt.Printf("Book %s in the %s series\n", details.SeriesPrimary.Position, details.SeriesPrimary.Name)
-
-	// 	chapters, err := prov.GetChapters(asin)
-	// 	if err != nil {
-	// 		fmt.Println("Error getting chapters:", err)
-	// 		return
-	// 	}
-
-	// 	fullFile := p.GetTestFile()
-
-	// 	for i, chapter := range chapters.Chapters {
-
-	// 		padded := fmt.Sprintf("%02d", i)
-
-	// 		fileName := fmt.Sprintf("[%s]. %s.mp3", padded, p.NormalizeFileName(chapter.Title))
-	// 		output := path.Join("F:/Music/Audiobook/Testing", fileName)
-
-	// 		duration := p.ConvertMilliseconds(chapter.LengthMs)
-	// 		fmt.Println("Processing Chapter:", padded, " - ", chapter.Title, " ("+p.GetDurationFormatted(duration)+")")
-
-	// 		cmd := exec.Command("ffmpeg",
-	// 			"-i", fullFile,
-	// 			"-ss", fmt.Sprintf("%f", p.ConvertMilliseconds(chapter.StartOffsetMs)),
-	// 			"-t", fmt.Sprintf("%f", p.ConvertMilliseconds(chapter.LengthMs)),
-	// 			"-acodec", "copy",
-	// 			output,
-	// 			"-hide_banner", "-loglevel", "error")
-
-	// 		err := cmd.Run()
-	// 		if err != nil {
-	// 			fmt.Println("Error:", err)
-	// 			return
-	// 		}
-
-	// 	}
-
-	// 	// fmt.Println("Chapters:", len(chapters.Chapters))
-
-	// 	os.Exit(0)
-	// }
+	if test {
+		fmt.Println("Test mode enabled. Exiting...")
+		os.Exit(0)
+	}
 
 	var ProcessBlock []p.Process
 
@@ -268,66 +211,51 @@ func main() {
 						fmt.Println("Error getting duration:", err)
 						os.Exit(1)
 					}
+
+					duration := seconds2 - seconds
+					process.Duration = p.GetDurationFormatted(duration)
+
 				} else { // parts don't match, and second part is not 0, so we need to go to the end of the first file and partially into the second file
 
+					// Second file will alwasy start at 0, so we can just use seconds2 value for it's duration
+					secondDur := seconds2
+
+					// Get the first file duration
+					fileLength, err := p.GetFileDuration(process.Source)
+					if err != nil {
+						fmt.Println("Error getting duration:", err)
+						os.Exit(1)
+					}
+
+					// Subtract the first file duration from the seconds
+					firstDur := fileLength - seconds
+
+					// Add the duration of the 2 file pieces together and assigns it to process.Duration
+					process.Duration = p.GetDurationFormatted(firstDur + secondDur)
+
+					// Generates the complex slit command
 					cmd, err := p.GetComplexSplit(process.Source, mp3FileMap[part2], seconds, seconds2)
 					if err != nil {
 						fmt.Println("Error getting command:", err)
 						os.Exit(1)
 					}
 
-					process.Override = cmd
+					// Sets the command
+					process.Command = cmd
 
 				}
 
+			} else {
+
+				cmd, err := p.GetSimpleSplit(process.Source, seconds, seconds2)
+				if err != nil {
+					fmt.Println("Error getting command:", err)
+					os.Exit(1)
+				}
+
+				process.Command = cmd
+
 			}
-
-			// if seconds2 == 0 {
-			// 	seconds2, err = p.GetFileDuration(process.Source)
-			// 	if err != nil {
-			// 		fmt.Println("Error getting duration:", err)
-			// 		os.Exit(1)
-			// 	}
-			// } else if part2 != part {
-
-			// 	file1 := process.Source
-			// 	file2 := mp3FileMap[part2]
-			// 	cmd, err := p.GetComplexSplit(file1, file2, seconds, seconds2)
-			// 	if err != nil {
-			// 		fmt.Println("Error getting command:", err)
-			// 		os.Exit(1)
-			// 	}
-
-			// 	// mp3File := mp3FileMap[part2]
-			// 	// bitrate, err := p.GetBitRate(process.Source)
-			// 	// if err != nil {
-			// 	// 	fmt.Println("Error getting bitrate:", err)
-			// 	// 	os.Exit(1)
-			// 	// }
-
-			// 	// bitrate2, err := p.GetBitRate(mp3File)
-			// 	// if err != nil {
-			// 	// 	fmt.Println("Error getting bitrate:", err)
-			// 	// 	os.Exit(1)
-			// 	// }
-
-			// 	// var bitrateLarger int
-			// 	// if bitrate > bitrate2 {
-			// 	// 	bitrateLarger = bitrate
-			// 	// } else {
-			// 	// 	bitrateLarger = bitrate2
-			// 	// }
-
-			// 	// cmd := exec.Command("ffmpeg",
-			// 	// 	"-i", process.Source,
-			// 	// 	"-i", mp3File,
-			// 	// 	"-filter_complex", fmt.Sprintf("[0:a]atrim=start=%.2f[a1];[1:a]atrim=start=0:end=%.2f[a2];[a1][a2]concat=n=2:v=0:a=1[out]", seconds, seconds2),
-			// 	// 	"-map", "[out]",
-			// 	// 	"-b:a", fmt.Sprintf("%d", bitrateLarger),
-			// 	// )
-
-			// 	process.Override = cmd
-			// }
 
 			process.End = seconds2
 
@@ -338,6 +266,16 @@ func main() {
 				fmt.Println("Error getting duration:", err)
 				os.Exit(1)
 			}
+
+			cmd, err := p.GetSimpleSplit(process.Source, seconds, process.End)
+			if err != nil {
+				fmt.Println("Error getting command:", err)
+				os.Exit(1)
+			}
+
+			duration := process.End - seconds
+			process.Duration = p.GetDurationFormatted(duration)
+			process.Command = cmd
 
 		}
 
@@ -374,43 +312,49 @@ func main() {
 
 		_, file := path.Split(process.Output)
 
-		if process.Override != nil {
+		// fmt.Printf("Processing Chapter: %s\n", process.Title)
+		fmt.Printf("Processing Chapter: %s (%s)\n", process.Title, process.Duration)
+		newCmd := process.Command
+		newCmd.Args = append(newCmd.Args, process.Output)
 
-			fmt.Printf("Processing Chapter: %s\n", process.Title)
-
-			newCmd := process.Override
-
-			// processString := fmt.Sprintf("'%s'", process.Output)
-			newCmd.Args = append(newCmd.Args, process.Output)
-
-			output, err := newCmd.CombinedOutput()
-			if err != nil {
-				fmt.Println("Error running command:", err)
-				fmt.Println("Command Output: ", string(output))
-				return
-			}
-
-		} else {
-
-			durationSeconds := process.End - process.Start
-			duration := p.GetDurationFormatted(durationSeconds)
-			fmt.Printf("Processing Chapter: %s (%s)\n", process.Title, duration)
-
-			cmd := exec.Command("ffmpeg",
-				"-i", process.Source,
-				"-ss", fmt.Sprintf("%f", process.Start),
-				"-to", fmt.Sprintf("%f", process.End),
-				"-acodec", "copy",
-				process.Output,
-				"-hide_banner", "-loglevel", "error")
-
-			err := cmd.Run()
-			if err != nil {
-				fmt.Println("Error:", err)
-				return
-			}
-
+		output, err := newCmd.CombinedOutput()
+		if err != nil {
+			fmt.Println("Error running command:", err)
+			fmt.Println("Command Output: ", string(output))
+			return
 		}
+
+		// if process.Command != nil {
+
+		// 	fmt.Printf("Processing Chapter: %s\n", process.Title)
+
+		// 	newCmd := process.Command
+
+		// 	// processString := fmt.Sprintf("'%s'", process.Output)
+		// 	newCmd.Args = append(newCmd.Args, process.Output)
+
+		// 	output, err := newCmd.CombinedOutput()
+		// 	if err != nil {
+		// 		fmt.Println("Error running command:", err)
+		// 		fmt.Println("Command Output: ", string(output))
+		// 		return
+		// 	}
+
+		// } else {
+
+		// 	durationSeconds := process.End - process.Start
+		// 	duration := p.GetDurationFormatted(durationSeconds)
+		// 	fmt.Printf("Processing Chapter: %s (%s)\n", process.Title, duration)
+
+		// 	cmd := process.Command
+
+		// 	err := cmd.Run()
+		// 	if err != nil {
+		// 		fmt.Println("Error:", err)
+		// 		return
+		// 	}
+
+		// }
 
 		m3u = append(m3u, fmt.Sprintf("#EXTINF:,%s\n%s", process.Title, file))
 

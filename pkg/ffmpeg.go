@@ -10,8 +10,16 @@ import (
 	"strings"
 )
 
-func GetSimpleSplit() string {
-	return "simple"
+func GetSimpleSplit(file string, start, end float64) (*exec.Cmd, error) {
+
+	cmd := exec.Command("ffmpeg",
+		"-i", file,
+		"-ss", fmt.Sprintf("%f", start),
+		"-to", fmt.Sprintf("%f", end),
+		"-acodec", "copy",
+		"-hide_banner", "-loglevel", "error")
+
+	return cmd, nil
 }
 
 // GetComplexSplit returns a *exec.Cmd that represents the command for splitting and merging audio files using ffmpeg.
