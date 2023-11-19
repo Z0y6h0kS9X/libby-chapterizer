@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"fmt"
+	"os/exec"
 	"time"
 )
 
@@ -129,11 +130,12 @@ type Chapters struct {
 }
 
 type Process struct {
-	Title  string
-	Source string
-	Output string
-	Start  float64
-	End    float64
+	Title    string
+	Source   string
+	Output   string
+	Start    float64
+	End      float64
+	Override *exec.Cmd
 }
 
 func (p Process) ToString() string {

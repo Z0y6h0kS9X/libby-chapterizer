@@ -23,23 +23,6 @@ func GetDurationFormatted(seconds float64) string {
 
 }
 
-func GetFileDuration(filepath string) float64 {
-
-	cmd := exec.Command("ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", filepath)
-	stdout, err := cmd.Output()
-	if err != nil {
-		fmt.Println("Error running ffprobe command:", err)
-	}
-	durationStr := strings.TrimSpace(string(stdout))
-	duration, err := strconv.ParseFloat(durationStr, 64)
-	if err != nil {
-		fmt.Println("Error parsing duration:", err)
-	}
-
-	return duration
-
-}
-
 func GetFileNameAndSeconds(path string) (string, float64) {
 	fileName := ""
 	seconds := 0.000
@@ -71,4 +54,42 @@ func GetPartFromMp3File(mp3File string) string {
 	}
 
 	return part
+}
+
+func GetBitRate(path string) (int, error) {
+	// ffprobe -v error -show_entries format=bit_rate -of default=noprint_wrappers=1 input.mp3
+	cmd := exec.Command("ffprobe", "-v", "error", "-show_entries", "format=bit_rate", "-of", "default=noprint_wrappers=1:nokey=1", path)
+
+	output, err := cmd.Output()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return 0, err
+	}
+
+	// Trim whitespace from the output
+	output = []byte(strings.TrimSpace(string(output)))
+
+	// Parse the output to an integer
+	bitRate, err := strconv.Atoi(string(output))
+	if err != nil {
+		fmt.Println("Error parsing bit rate:", err)
+		return 0, err
+	}
+
+	return bitRate, nil
+}
+
+func NormalizeFileName(filename string) string {
+
+	outputFileNormal := strings.Map(func(r rune) rune {
+		switch {
+		case r == '<' || r == '>' || r == ':' || r == '"' || r == '/' || r == '\\' || r == '|' || r == '?' || r == '*':
+			return '-'
+		default:
+			return r
+		}
+	}, filename)
+
+	return outputFileNormal
+
 }
