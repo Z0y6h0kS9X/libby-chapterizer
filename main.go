@@ -156,7 +156,7 @@ func main() {
 		}
 	}
 
-	duration := p.GetDurationFormatted(totalDuration)
+	duration := p.FormatDuration(totalDuration)
 
 	fmt.Println("============================")
 	fmt.Println("Audiobook Information")
@@ -212,26 +212,36 @@ func main() {
 						os.Exit(1)
 					}
 
-					duration := seconds2 - seconds
-					process.Duration = p.GetDurationFormatted(duration)
-
-				} else { // parts don't match, and second part is not 0, so we need to go to the end of the first file and partially into the second file
-
-					// Second file will alwasy start at 0, so we can just use seconds2 value for it's duration
-					secondDur := seconds2
-
-					// Get the first file duration
-					fileLength, err := p.GetFileDuration(process.Source)
+					// duration := seconds2 - seconds
+					process.Duration, err = p.GetSimpleDuration(seconds, seconds2)
 					if err != nil {
 						fmt.Println("Error getting duration:", err)
 						os.Exit(1)
 					}
 
-					// Subtract the first file duration from the seconds
-					firstDur := fileLength - seconds
+				} else { // parts don't match, and second part is not 0, so we need to go to the end of the first file and partially into the second file
 
-					// Add the duration of the 2 file pieces together and assigns it to process.Duration
-					process.Duration = p.GetDurationFormatted(firstDur + secondDur)
+					// // Second file will alwasy start at 0, so we can just use seconds2 value for it's duration
+					// secondDur := seconds2
+
+					// // Get the first file duration
+					// fileLength, err := p.GetFileDuration(process.Source)
+					// if err != nil {
+					// 	fmt.Println("Error getting duration:", err)
+					// 	os.Exit(1)
+					// }
+
+					// // Subtract the first file duration from the seconds
+					// firstDur := fileLength - seconds
+
+					// // Add the duration of the 2 file pieces together and assigns it to process.Duration
+					// process.Duration = p.FormatDuration(firstDur + secondDur)
+
+					dur, err := p.GetComplexDuration(process.Source, seconds, seconds2)
+					if err != nil {
+						fmt.Println("Error getting duration:", err)
+						os.Exit(1)
+					}
 
 					// Generates the complex slit command
 					cmd, err := p.GetComplexSplit(process.Source, mp3FileMap[part2], seconds, seconds2)
@@ -240,8 +250,14 @@ func main() {
 						os.Exit(1)
 					}
 
+					// print Complex
+					fmt.Println(cmd)
+
 					// Sets the command
 					process.Command = cmd
+
+					// Sets the duration
+					process.Duration = dur
 
 				}
 
@@ -253,6 +269,13 @@ func main() {
 					os.Exit(1)
 				}
 
+				dur, err := p.GetSimpleDuration(seconds, seconds2)
+				if err != nil {
+					fmt.Println("Error getting duration:", err)
+					os.Exit(1)
+				}
+
+				process.Duration = dur
 				process.Command = cmd
 
 			}
@@ -263,7 +286,7 @@ func main() {
 
 			process.End, err = p.GetFileDuration(process.Source)
 			if err != nil {
-				fmt.Println("Error getting duration:", err)
+				fmt.Println("Error getting file duration:", err)
 				os.Exit(1)
 			}
 
@@ -273,8 +296,13 @@ func main() {
 				os.Exit(1)
 			}
 
-			duration := process.End - seconds
-			process.Duration = p.GetDurationFormatted(duration)
+			dur, err := p.GetSimpleDuration(seconds, process.End)
+			if err != nil {
+				fmt.Println("Error getting duration:", err)
+				os.Exit(1)
+			}
+
+			process.Duration = dur
 			process.Command = cmd
 
 		}
@@ -288,7 +316,10 @@ func main() {
 		iteration := fmt.Sprintf("%02d", i)
 
 		// Sets the output path
-		process.Output = path.Join(outputPath, "["+iteration+"]. "+outputFileNormal+".mp3")
+		debugOutPath := path.Join(outputPath, "["+iteration+"]. "+outputFileNormal+".mp3")
+		// fmt.Println("Out Path:", debugOutPath)
+		// process.Output = path.Join(outputPath, "["+iteration+"]. "+outputFileNormal+".mp3")
+		process.Output = debugOutPath
 
 		// Adds the process to the ProcessBlock
 		ProcessBlock = append(ProcessBlock, process)
@@ -311,6 +342,8 @@ func main() {
 	for _, process := range ProcessBlock {
 
 		_, file := path.Split(process.Output)
+
+		fmt.Println("Command:", process.Command)
 
 		// fmt.Printf("Processing Chapter: %s\n", process.Title)
 		fmt.Printf("Processing Chapter: %s (%s)\n", process.Title, process.Duration)
@@ -343,7 +376,7 @@ func main() {
 		// } else {
 
 		// 	durationSeconds := process.End - process.Start
-		// 	duration := p.GetDurationFormatted(durationSeconds)
+		// 	duration := p.FormatDuration(durationSeconds)
 		// 	fmt.Printf("Processing Chapter: %s (%s)\n", process.Title, duration)
 
 		// 	cmd := process.Command

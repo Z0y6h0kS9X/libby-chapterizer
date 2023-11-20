@@ -2,13 +2,14 @@ package pkg
 
 import (
 	"fmt"
+	"log"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 )
 
-func formatDuration(seconds float64) string {
+func FormatDuration(seconds float64) string {
 
 	lengthRaw := time.Duration(seconds) * time.Second
 	length := fmt.Sprintf("%02d:%02d:%02d.%03d",
@@ -23,8 +24,35 @@ func formatDuration(seconds float64) string {
 
 }
 
-func GetDuraion(file1, file2 string, file1Start, file2End float64) string {
-	return "not implemented"
+func GetComplexDuration(file1 string, file1Start, file2End float64) (string, error) {
+
+	file1Duration, err := GetFileDuration(file1)
+	if err != nil {
+		log.Println("Error getting file1 duration:", err)
+		return "", err
+	}
+
+	// Calculates duration using file duration and start time
+	duration1 := file1Duration - file1Start
+
+	// file 2 will always start as 0, so no need to get duration, it will be whatever file2End is
+	duration2 := file2End
+
+	// Adds the duration of the 2 file pieces together
+	duration := duration1 + duration2
+
+	// Formats the duration
+	durationFormatted := FormatDuration(duration)
+
+	return durationFormatted, nil
+}
+
+func GetSimpleDuration(start, end float64) (string, error) {
+
+	lengthRaw := end - start
+	length := FormatDuration(lengthRaw)
+
+	return length, nil
 }
 
 func GetFileNameAndSeconds(path string) (string, float64) {
