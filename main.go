@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path"
 	"strconv"
 	"strings"
@@ -180,7 +181,6 @@ func main() {
 	var ProcessBlock []p.Process
 
 	// iterates through the book.nav.toc array and splits the path on "Fmt425-" and "#" to enumerate the seconds (if applicable) and match to the file paths above
-	// for _, toc := range book.Nav.Toc {
 	for i := 0; i < len(book.Nav.Toc); i++ {
 
 		// Makes an empty Process object
@@ -202,6 +202,9 @@ func main() {
 			toc2 := book.Nav.Toc[i+1]
 			part2, seconds2 := p.GetFileNameAndSeconds(toc2.Path)
 
+			var cmd *exec.Cmd
+			var dur string
+
 			if part != part2 {
 
 				// parts don't match, but second part is 0, so we just go to the end of the first file
@@ -213,31 +216,21 @@ func main() {
 					}
 
 					// duration := seconds2 - seconds
-					process.Duration, err = p.GetSimpleDuration(seconds, seconds2)
+					dur, err = p.GetSimpleDuration(seconds, seconds2)
 					if err != nil {
 						fmt.Println("Error getting duration:", err)
 						os.Exit(1)
 					}
 
+					cmd, err = p.GetSimpleSplit(process.Source, seconds, seconds2)
+					if err != nil {
+						fmt.Println("Error getting command:", err)
+						os.Exit(1)
+					}
+
 				} else { // parts don't match, and second part is not 0, so we need to go to the end of the first file and partially into the second file
 
-					// // Second file will alwasy start at 0, so we can just use seconds2 value for it's duration
-					// secondDur := seconds2
-
-					// // Get the first file duration
-					// fileLength, err := p.GetFileDuration(process.Source)
-					// if err != nil {
-					// 	fmt.Println("Error getting duration:", err)
-					// 	os.Exit(1)
-					// }
-
-					// // Subtract the first file duration from the seconds
-					// firstDur := fileLength - seconds
-
-					// // Add the duration of the 2 file pieces together and assigns it to process.Duration
-					// process.Duration = p.FormatDuration(firstDur + secondDur)
-
-					dur, err := p.GetComplexDuration(process.Source, seconds, seconds2)
+					dur, err = p.GetComplexDuration(process.Source, seconds, seconds2)
 					if err != nil {
 						fmt.Println("Error getting duration:", err)
 						os.Exit(1)
@@ -251,15 +244,15 @@ func main() {
 					}
 
 					// print Complex
+					fmt.Println("Complex")
 					fmt.Println(cmd)
 
-					// Sets the command
-					process.Command = cmd
-
-					// Sets the duration
-					process.Duration = dur
-
 				}
+
+				// Sets the command
+				process.Command = cmd
+				// Sets the duration
+				process.Duration = dur
 
 			} else {
 
@@ -317,8 +310,6 @@ func main() {
 
 		// Sets the output path
 		debugOutPath := path.Join(outputPath, "["+iteration+"]. "+outputFileNormal+".mp3")
-		// fmt.Println("Out Path:", debugOutPath)
-		// process.Output = path.Join(outputPath, "["+iteration+"]. "+outputFileNormal+".mp3")
 		process.Output = debugOutPath
 
 		// Adds the process to the ProcessBlock
@@ -343,8 +334,6 @@ func main() {
 
 		_, file := path.Split(process.Output)
 
-		fmt.Println("Command:", process.Command)
-
 		// fmt.Printf("Processing Chapter: %s\n", process.Title)
 		fmt.Printf("Processing Chapter: %s (%s)\n", process.Title, process.Duration)
 		newCmd := process.Command
@@ -356,38 +345,6 @@ func main() {
 			fmt.Println("Command Output: ", string(output))
 			return
 		}
-
-		// if process.Command != nil {
-
-		// 	fmt.Printf("Processing Chapter: %s\n", process.Title)
-
-		// 	newCmd := process.Command
-
-		// 	// processString := fmt.Sprintf("'%s'", process.Output)
-		// 	newCmd.Args = append(newCmd.Args, process.Output)
-
-		// 	output, err := newCmd.CombinedOutput()
-		// 	if err != nil {
-		// 		fmt.Println("Error running command:", err)
-		// 		fmt.Println("Command Output: ", string(output))
-		// 		return
-		// 	}
-
-		// } else {
-
-		// 	durationSeconds := process.End - process.Start
-		// 	duration := p.FormatDuration(durationSeconds)
-		// 	fmt.Printf("Processing Chapter: %s (%s)\n", process.Title, duration)
-
-		// 	cmd := process.Command
-
-		// 	err := cmd.Run()
-		// 	if err != nil {
-		// 		fmt.Println("Error:", err)
-		// 		return
-		// 	}
-
-		// }
 
 		m3u = append(m3u, fmt.Sprintf("#EXTINF:,%s\n%s", process.Title, file))
 
