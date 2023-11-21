@@ -34,11 +34,11 @@ Currently the program will take the source mp3 files, alongside the openbook.jso
 
 ### Arguments
 
-| Flag                      | Shorthand | Default Value | Description                                               |
-|---------------------------|-----------|--------------|---------------|-----------------------------------------------------------|
-| --json,               |    -j       | ""            | The path to the openbook.json file                         |
-| --out                 |      -o     |  ""            | The path to the directory you want to output the files to  |                                 |
-| --use-audible-chapters |     -c      |  false        | Specifies to override default breaks and use audible markers instead|
+| Flag                   | Shorthand | Default | Description                                                          |
+|------------------------|:---------:|---------|----------------------------------------------------------------------|
+| --json                 |     -j    |    ""   | The path to the openbook.json file                                   |
+| --out                  |     -o    |    ""   | The path to the directory you want to output the files to            |
+| --use-audible-chapters |     -c    |  false  | Specifies to override default breaks and use audible markers instead |
 
 #### Default (outputs in same directory as files)
 ./libby-chapterizer-windows.exe --json <'path to json'>
