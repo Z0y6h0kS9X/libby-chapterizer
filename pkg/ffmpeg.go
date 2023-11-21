@@ -86,3 +86,32 @@ func GetFileDuration(filepath string) (float64, error) {
 	// Return the duration
 	return duration, nil
 }
+
+// MakeCombinedMP3 concatenates multiple MP3 files into a single output file.
+// It takes a slice of file paths and the path of the output file as input.
+// It returns an error if the operation fails.
+func MakeCombinedMP3(files []string, outputFile string) error {
+
+	fmt.Println("Making combined MP3...")
+
+	// Create a slice to store the command line arguments
+	var args []string
+
+	// Append the input file paths to the arguments slice using the "concat" format
+	args = append(args, "-i", "concat:"+strings.Join(files, "|"))
+
+	// Set the audio codec to "copy" to preserve the original audio codecs
+	args = append(args, "-acodec", "copy", outputFile)
+
+	// Create a new command using the "ffmpeg" executable and the arguments
+	cmd := exec.Command("ffmpeg", args...)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error:", err)
+		fmt.Println("Output:", string(output))
+	}
+
+	// Return nil if the operation is successful
+	return nil
+}

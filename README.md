@@ -2,7 +2,7 @@
 
 ## Description
 
-Go utility for converting downloaded audiobooks from Libby/Overdrive into individual chapters rather than the standard file split.  It will place the files in ../Author/Series/Title/*
+Go utility for converting downloaded audiobooks from Libby/Overdrive into individual chapters rather than the standard file split.  It will place the files in ../Author/Series/[\#]. Title (ASIN)/*
 
 ## Table of Contents
 
@@ -27,16 +27,27 @@ Currently the program will take the source mp3 files, alongside the openbook.jso
 - [x] Split based on openbook splits
 - [x] Generate M3U file
 - [ ] Convert mp3 files into chapterized M4b (optional)
-- [ ] Look up book in Audible to pull metadata
+- [x] Look up book in Audible to pull metadata
 - [ ] Write metadata to m4b file
 
 ## Usage
+
+### Arguments
+
+| Flag                      | Shorthand | Default Value | Description                                               |
+|---------------------------|-----------|--------------|---------------|-----------------------------------------------------------|
+| --json,               |    -j       | ""            | The path to the openbook.json file                         |
+| --out                 |      -o     |  ""            | The path to the directory you want to output the files to  |                                 |
+| --use-audible-chapters |     -c      |  false        | Specifies to override default breaks and use audible markers instead|
 
 #### Default (outputs in same directory as files)
 ./libby-chapterizer-windows.exe --json <'path to json'>
 
 #### Custom (outputs in custom directory)
 ./libby-chapterizer-windows.exe --json <'path to json'> --out <'output directory path'>
+
+#### Custom (outputs in custom directory, uses audible chapters instead of openbook)
+./libby-chapterizer-windows.exe --json <'path to json'> --out <'output directory path'> --use-audible-chapters
 
 ## Contributing
 

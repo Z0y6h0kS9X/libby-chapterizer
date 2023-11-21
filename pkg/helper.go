@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 	"time"
+	// prov "Z0y6h0kS9X/libby-chapterizer/provider"
 )
 
 func FormatDuration(seconds float64) string {
@@ -111,7 +113,7 @@ func GetBitRate(path string) (int, error) {
 	return bitRate, nil
 }
 
-func NormalizeFileName(filename string) string {
+func NormalizeName(filename string) string {
 
 	outputFileNormal := strings.Map(func(r rune) rune {
 		switch {
@@ -123,5 +125,33 @@ func NormalizeFileName(filename string) string {
 	}, filename)
 
 	return outputFileNormal
+
+}
+
+func GetOutputDirPath(details BookDetails, asin, outPath string) (string, error) {
+
+	// Adds the first author, series name, and title to the path
+	outName := details.Title
+	if asin != "" {
+		outName = outName + " (" + asin + ")"
+	}
+
+	if details.SeriesPrimary.Name != "" {
+		floatNumber, err := strconv.ParseFloat(details.SeriesPrimary.Position, 64)
+		if err != nil {
+			fmt.Println("Error parsing float:", err)
+		}
+		padded := fmt.Sprintf("%04.1f", floatNumber)
+		outName = "[" + padded + "]. " + outName
+	}
+
+	// Normalizes the fields
+	outName = NormalizeName(outName)
+	seriesName := NormalizeName(details.SeriesPrimary.Name)
+	author := NormalizeName(details.Authors[0].Name)
+
+	outputDir := path.Join(outPath, author, seriesName, outName)
+
+	return outputDir, nil
 
 }

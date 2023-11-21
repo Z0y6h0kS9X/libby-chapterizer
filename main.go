@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -28,11 +29,13 @@ var rootCmd = &cobra.Command{
 var jsonPath string
 var outPath string
 var test bool
+var audibleChapters bool
 
 func init() {
 	rootCmd.Flags().StringVarP(&jsonPath, "json", "j", "", "The path to the openbook.json file")
 	rootCmd.Flags().StringVarP(&outPath, "out", "o", "", "The path to the directory you want to output the files to")
 	rootCmd.Flags().BoolVarP(&test, "test", "t", false, "Test mode")
+	rootCmd.Flags().BoolVarP(&audibleChapters, "use-audible-chapters", "c", false, "Specifies to override default breaks and use audible markers instead")
 }
 
 func main() {
@@ -51,12 +54,14 @@ func main() {
 	}
 	defer file.Close()
 
+	// Reads the file
 	data, err := io.ReadAll(file)
 	if err != nil {
 		fmt.Println("Error reading file:", err)
 		return
 	}
 
+	// Unmarshals JSON
 	var book p.Openbook
 	err = json.Unmarshal(data, &book)
 	if err != nil {
@@ -87,11 +92,20 @@ func main() {
 		fileDir = path.Dir(jsonPath)
 	}
 
+	fmt.Println("Looking up Book ASIN...")
+
 	// Gets the ASIN
 	asin, err := prov.GetBook(book.Title.Main, authorString, narratorString)
 	if err != nil {
 		fmt.Println("Error getting book:", err)
 		return
+	}
+
+	if asin == "" {
+		fmt.Println("No ASIN found")
+		return
+	} else {
+		fmt.Println("ASIN:", asin)
 	}
 
 	// Gets the book details
@@ -101,33 +115,29 @@ func main() {
 		return
 	}
 
-	// Gets the path
+	// Checks if the user specified an output path
 	var outDir string
-
 	if outPath != "" {
 		outDir = strings.Replace(outPath, "\\", "/", -1)
-
 	} else {
 		outDir = fileDir
 	}
 
-	// Adds the first author, series name, and title to the path
-	outName := book.Title.Main
-	if asin != "" {
-		outName = outName + " (" + asin + ")"
+	// Gets the output dir path
+	outputPath, err := p.GetOutputDirPath(details, asin, outDir)
+	if err != nil {
+		fmt.Println("Error getting output dir path:", err)
+		return
 	}
 
-	if details.SeriesPrimary.Name != "" {
-		floatNumber, err := strconv.ParseFloat(details.SeriesPrimary.Position, 64)
+	// Checks if the folder exists and creates it if it does not
+	if _, err := os.Stat(outputPath); os.IsNotExist(err) {
+		err := os.MkdirAll(outputPath, 0755)
 		if err != nil {
-			fmt.Println("Error parsing float:", err)
+			fmt.Println("Error creating directory:", err)
 			return
 		}
-		padded := fmt.Sprintf("%04.1f", floatNumber)
-		outName = "[" + padded + "]. " + outName
 	}
-
-	outputPath := path.Join(outDir, authors[0], book.Title.Collection, outName)
 
 	// Gets a list of all the .mp3 files in the fileDir
 	files, err := os.ReadDir(fileDir)
@@ -137,8 +147,8 @@ func main() {
 	}
 
 	mp3FileMap := make(map[string]string)
-	// var mp3Files []string
 	totalDuration := 0.000
+	var mp3Files []string
 
 	for _, file := range files {
 		if path.Ext(file.Name()) == ".mp3" {
@@ -154,6 +164,11 @@ func main() {
 				return
 			}
 			totalDuration += duration
+
+			// If use-audible-chapters flag is set, add the full path to the array for later processing
+			if audibleChapters {
+				mp3Files = append(mp3Files, fullPath)
+			}
 		}
 	}
 
@@ -176,153 +191,155 @@ func main() {
 	if test {
 		fmt.Println("Test mode enabled. Exiting...")
 		os.Exit(0)
+
 	}
 
 	var ProcessBlock []p.Process
 
-	// iterates through the book.nav.toc array and splits the path on "Fmt425-" and "#" to enumerate the seconds (if applicable) and match to the file paths above
-	for i := 0; i < len(book.Nav.Toc); i++ {
+	var tempFile string
 
-		// Makes an empty Process object
-		var process p.Process
+	if audibleChapters {
 
-		toc := book.Nav.Toc[i]
-		part, seconds := p.GetFileNameAndSeconds(toc.Path)
+		// Set the output path for the combined MP3 file
+		fileName := fmt.Sprintf("%s (%s)", p.NormalizeName(book.Title.Main), asin)
+		tempFile = path.Join(outputPath, fileName+".mp3")
 
-		// Lookup the mp3File directly using a map
-		if mp3File, ok := mp3FileMap[part]; ok {
-			process.Source = mp3File
-		} else {
-			fmt.Println("Part not found:", part)
-			os.Exit(1)
+		// Call the MakeCombinedMP3 function to create the combined MP3 file
+		err = p.MakeCombinedMP3(mp3Files, tempFile)
+		if err != nil {
+			fmt.Println("Error making combined MP3:", err)
+			return
 		}
 
-		// Gets the next file in the mp3Files array and checks if it matches the path of the toc
-		if i < len(book.Nav.Toc)-1 {
-			toc2 := book.Nav.Toc[i+1]
-			part2, seconds2 := p.GetFileNameAndSeconds(toc2.Path)
+		chapters, err := prov.GetChapters(asin)
+		if err != nil {
+			fmt.Println("Error getting chapters:", err)
+			return
+		}
+
+		for i, chapter := range chapters.Chapters {
+
+			title := chapter.Title
+			start, _ := strconv.ParseFloat(strconv.Itoa(chapter.StartOffsetMs/1000), 64)
+			dur, _ := strconv.ParseFloat(strconv.Itoa(chapter.LengthMs/1000), 64)
+			end := start + dur
+
+			process := p.Process{}
+
+			cmd, err := p.GetSimpleSplit(tempFile, start, end)
+			if err != nil {
+				fmt.Println("Error getting simple split:", err)
+				return
+			}
+
+			// Normalizes the title
+			outputFileNormal := p.NormalizeName(title)
+			iteration := fmt.Sprintf("%02d", i)
+
+			process.Source = tempFile
+			process.Start = start
+			process.End = end
+			process.Duration = p.FormatDuration(dur)
+			process.Title = title
+			process.Command = cmd
+			process.Output = path.Join(outputPath, "["+iteration+"]. "+outputFileNormal+".mp3")
+
+			ProcessBlock = append(ProcessBlock, process)
+
+		}
+
+	} else {
+
+		for i, toc := range book.Nav.Toc {
+
+			process := p.Process{}
+			part, seconds := p.GetFileNameAndSeconds(toc.Path)
+
+			switch mp3File := mp3FileMap[part]; {
+			case mp3File != "":
+				process.Source = mp3File
+			default:
+				log.Fatalf("Part not found: %s", part)
+			}
 
 			var cmd *exec.Cmd
 			var dur string
 
-			if part != part2 {
+			if i < len(book.Nav.Toc)-1 {
+				toc2 := book.Nav.Toc[i+1]
+				part2, seconds2 := p.GetFileNameAndSeconds(toc2.Path)
 
-				// parts don't match, but second part is 0, so we just go to the end of the first file
-				if seconds2 == 0 {
-					seconds2, err = p.GetFileDuration(process.Source)
-					if err != nil {
-						fmt.Println("Error getting duration:", err)
-						os.Exit(1)
+				if part != part2 {
+					if seconds2 == 0 {
+						seconds2, err = p.GetFileDuration(process.Source)
+						if err != nil {
+							log.Fatalf("Error getting duration: %v", err)
+						}
+						dur, err = p.GetSimpleDuration(seconds, seconds2)
+						if err != nil {
+							log.Fatalf("Error getting duration: %v", err)
+						}
+						cmd, err = p.GetSimpleSplit(process.Source, seconds, seconds2)
+						if err != nil {
+							log.Fatalf("Error getting command: %v", err)
+						}
+					} else {
+						dur, err = p.GetComplexDuration(process.Source, seconds, seconds2)
+						if err != nil {
+							log.Fatalf("Error getting duration: %v", err)
+						}
+						cmd, err = p.GetComplexSplit(process.Source, mp3FileMap[part2], seconds, seconds2)
+						if err != nil {
+							log.Fatalf("Error getting command: %v", err)
+						}
 					}
-
-					// duration := seconds2 - seconds
-					dur, err = p.GetSimpleDuration(seconds, seconds2)
-					if err != nil {
-						fmt.Println("Error getting duration:", err)
-						os.Exit(1)
-					}
-
+				} else {
 					cmd, err = p.GetSimpleSplit(process.Source, seconds, seconds2)
 					if err != nil {
-						fmt.Println("Error getting command:", err)
-						os.Exit(1)
+						log.Fatalf("Error getting command: %v", err)
 					}
-
-				} else { // parts don't match, and second part is not 0, so we need to go to the end of the first file and partially into the second file
-
-					dur, err = p.GetComplexDuration(process.Source, seconds, seconds2)
+					dur, err = p.GetSimpleDuration(seconds, seconds2)
 					if err != nil {
-						fmt.Println("Error getting duration:", err)
-						os.Exit(1)
+						log.Fatalf("Error getting duration: %v", err)
 					}
-
-					// Generates the complex slit command
-					cmd, err := p.GetComplexSplit(process.Source, mp3FileMap[part2], seconds, seconds2)
-					if err != nil {
-						fmt.Println("Error getting command:", err)
-						os.Exit(1)
-					}
-
-					// print Complex
-					fmt.Println("Complex")
-					fmt.Println(cmd)
-
 				}
 
-				// Sets the command
-				process.Command = cmd
-				// Sets the duration
-				process.Duration = dur
+				process.End = seconds2
+			} else if i == len(book.Nav.Toc)-1 {
+				process.End, err = p.GetFileDuration(process.Source)
+				if err != nil {
+					fmt.Println("Error getting file duration:", err)
+					os.Exit(1)
+				}
 
-			} else {
-
-				cmd, err := p.GetSimpleSplit(process.Source, seconds, seconds2)
+				cmd, err = p.GetSimpleSplit(process.Source, seconds, process.End)
 				if err != nil {
 					fmt.Println("Error getting command:", err)
 					os.Exit(1)
 				}
 
-				dur, err := p.GetSimpleDuration(seconds, seconds2)
+				dur, err = p.GetSimpleDuration(seconds, process.End)
 				if err != nil {
 					fmt.Println("Error getting duration:", err)
 					os.Exit(1)
 				}
-
-				process.Duration = dur
-				process.Command = cmd
-
 			}
 
-			process.End = seconds2
+			// Normalizes the title
+			outputFileNormal := p.NormalizeName(toc.Title)
+			iteration := fmt.Sprintf("%02d", i)
 
-		} else if i == len(book.Nav.Toc)-1 {
-
-			process.End, err = p.GetFileDuration(process.Source)
-			if err != nil {
-				fmt.Println("Error getting file duration:", err)
-				os.Exit(1)
-			}
-
-			cmd, err := p.GetSimpleSplit(process.Source, seconds, process.End)
-			if err != nil {
-				fmt.Println("Error getting command:", err)
-				os.Exit(1)
-			}
-
-			dur, err := p.GetSimpleDuration(seconds, process.End)
-			if err != nil {
-				fmt.Println("Error getting duration:", err)
-				os.Exit(1)
-			}
-
+			// Adds the Process object properties
+			process.Title = toc.Title
+			process.Start = seconds
 			process.Duration = dur
 			process.Command = cmd
+			process.Output = path.Join(outputPath, "["+iteration+"]. "+outputFileNormal+".mp3")
 
+			// Adds the process to the ProcessBlock
+			ProcessBlock = append(ProcessBlock, process)
 		}
 
-		// Adds the title, start time, and output path
-		process.Title = toc.Title
-		process.Start = seconds
-
-		outputFileNormal := p.NormalizeFileName(toc.Title)
-
-		iteration := fmt.Sprintf("%02d", i)
-
-		// Sets the output path
-		debugOutPath := path.Join(outputPath, "["+iteration+"]. "+outputFileNormal+".mp3")
-		process.Output = debugOutPath
-
-		// Adds the process to the ProcessBlock
-		ProcessBlock = append(ProcessBlock, process)
-	}
-
-	// Checks if the folder exists and creates it if it does not
-	if _, err := os.Stat(outputPath); os.IsNotExist(err) {
-		err := os.MkdirAll(outputPath, 0755)
-		if err != nil {
-			fmt.Println("Error creating directory:", err)
-			return
-		}
 	}
 
 	// Runs the commands to generate the output files
@@ -334,8 +351,7 @@ func main() {
 
 		_, file := path.Split(process.Output)
 
-		// fmt.Printf("Processing Chapter: %s\n", process.Title)
-		fmt.Printf("Processing Chapter: %s (%s)\n", process.Title, process.Duration)
+		fmt.Printf("Processing Item: %s (%s)\n", process.Title, process.Duration)
 		newCmd := process.Command
 		newCmd.Args = append(newCmd.Args, process.Output)
 
@@ -351,10 +367,15 @@ func main() {
 	}
 
 	content := strings.Join(m3u, "\n")
-	err = os.WriteFile(path.Join(outputPath, book.Title.Main+".m3u"), []byte(content), 0644)
+	err = os.WriteFile(path.Join(outputPath, p.NormalizeName(book.Title.Main)+".m3u"), []byte(content), 0644)
 	if err != nil {
 		fmt.Println("Error writing file:", err)
 		return
+	}
+
+	// removes the tempFile if it exists
+	if _, err := os.Stat(tempFile); err == nil {
+		os.Remove(tempFile)
 	}
 
 }
