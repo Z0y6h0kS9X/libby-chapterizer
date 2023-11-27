@@ -5,10 +5,16 @@ import (
 	"log"
 	"os/exec"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 	// prov "Z0y6h0kS9X/libby-chapterizer/provider"
+)
+
+var (
+	authorRegex   = regexp.MustCompile(`^aut(hor)?$`)
+	narratorRegex = regexp.MustCompile(`^n(arrator|rt)?$`)
 )
 
 func FormatDuration(seconds float64) string {
@@ -136,7 +142,7 @@ func GetOutputDirPath(details BookDetails, asin, outPath string) (string, error)
 		outName = outName + " (" + asin + ")"
 	}
 
-	if details.SeriesPrimary.Name != "" {
+	if details.SeriesPrimary.Position != "" {
 		floatNumber, err := strconv.ParseFloat(details.SeriesPrimary.Position, 64)
 		if err != nil {
 			fmt.Println("Error parsing float:", err)
@@ -153,5 +159,85 @@ func GetOutputDirPath(details BookDetails, asin, outPath string) (string, error)
 	outputDir := path.Join(outPath, author, seriesName, outName)
 
 	return outputDir, nil
+
+}
+
+func GetBookDetailsNoASIN(book Openbook) (BookDetails, error) {
+
+	details := BookDetails{}
+
+	// Create an author object
+	author := struct {
+		Asin string `json:"asin,omitempty"`
+		Name string `json:"name,omitempty"`
+	}{
+		Asin: "",
+		Name: GetPrimaryAuthor(book),
+	}
+
+	// Create a narrator object
+	narrator := struct {
+		Name string `json:"name,omitempty"`
+	}{
+		Name: GetPrimaryNarrator(book),
+	}
+
+	// Set the details
+	details.Authors = []struct {
+		Asin string `json:"asin,omitempty"`
+		Name string `json:"name,omitempty"`
+	}{author}
+
+	details.Narrators = []struct {
+		Name string `json:"name,omitempty"`
+	}{narrator}
+
+	details.Title = book.Title.Main
+	details.SeriesPrimary.Name = book.Title.Collection
+	details.Subtitle = book.Title.Subtitle
+	details.Description = book.Description.Full
+
+	return details, nil
+
+}
+
+func GetPrimaryAuthor(book Openbook) string {
+
+	var authors []string
+
+	// Get the primary author
+	for _, creator := range book.Creator {
+		if authorRegex.MatchString(creator.Role) {
+			authors = append(authors, creator.Name)
+			continue
+		}
+	}
+
+	// Return the first author
+	if len(authors) == 0 {
+		return ""
+	} else {
+		return authors[0]
+	}
+
+}
+
+func GetPrimaryNarrator(book Openbook) string {
+
+	var narrators []string
+
+	// Get the primary narrator
+	for _, creator := range book.Creator {
+		if narratorRegex.MatchString(creator.Role) {
+			narrators = append(narrators, creator.Name)
+		}
+	}
+
+	// Return the first narrator
+	if len(narrators) == 0 {
+		return ""
+	} else {
+		return narrators[0]
+	}
 
 }

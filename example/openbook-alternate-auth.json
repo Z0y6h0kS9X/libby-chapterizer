@@ -1,0 +1,280 @@
+{
+    "cover": {
+        "front": {
+            "media-type": "image/jpeg",
+            "-odread-aspect-ratio": 0.75,
+            "-odread-color": [
+                99,
+                182,
+                166
+            ],
+            "-odread-file-bytes": 56484,
+            "-odread-height": 600,
+            "-odread-width": 450,
+            "path": "cover.jpg"
+        }
+    },
+    "creator": [
+        {
+            "name": "Lynne Reid Banks",
+            "role": "aut"
+        },
+        {
+            "name": "Lynne Reid Banks",
+            "role": "nrt"
+        }
+    ],
+    "description": {
+        "full": "瀀㸀䤀琀 愀氀氀 猀琀愀爀琀攀搀 眀椀琀栀 愀 戀椀爀琀栀搀愀礀 瀀爀攀猀攀渀琀 琀栀愀琀 伀洀爀椀 搀椀搀渀✀琀 眀愀渀琀ᐠ愀 猀洀愀氀氀 瀀氀愀猀琀椀挀 䤀渀搀椀愀渀 琀栀愀琀 眀愀猀 渀漀 甀猀攀 琀漀 栀椀洀 愀琀 愀氀氀⸀ 䈀甀琀 愀渀 漀氀搀 眀漀漀搀攀渀 挀甀瀀戀漀愀爀搀 愀渀搀 愀 猀瀀攀挀椀愀氀 欀攀礀 戀爀漀甀最栀琀 栀椀猀 甀渀甀猀甀愀氀 琀漀礀 琀漀 氀椀昀攀Ⰰ 愀渀搀 猀琀爀愀渀最攀 愀渀搀 眀漀渀搀攀爀昀甀氀 琀栀椀渀最猀 戀攀最愀渀 琀漀 栀愀瀀瀀攀渀⸀ 䄀猀 伀洀爀椀 猀琀爀甀最最氀攀猀 琀漀 戀愀氀愀渀挀攀 栀椀猀 爀攀愀氀 氀椀昀攀 椀渀 䔀渀最氀愀渀搀 眀椀琀栀 琀栀攀 挀栀愀爀愀挀琀攀爀猀 漀昀 琀栀攀 圀椀氀搀 圀攀猀琀 漀昀 ㄀㠀琀栀 挀攀渀琀甀爀礀 䄀洀攀爀椀挀愀Ⰰ 栀椀猀 椀渀挀爀攀搀椀戀氀攀 愀搀瘀攀渀琀甀爀攀猀 愀爀攀 愀 昀愀渀琀愀猀礀 戀攀礀漀渀搀 栀椀猀 眀椀氀搀攀猀琀 椀洀愀最椀渀愀琀椀漀渀⸀"
+    },
+    "nav": {
+        "toc": [
+            {
+                "contents": [
+                    {
+                        "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part01.mp3#6",
+                        "title": "Introduction (00:06)"
+                    },
+                    {
+                        "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part01.mp3#378.32",
+                        "title": "Introduction (06:18)"
+                    },
+                    {
+                        "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part01.mp3#750.04",
+                        "title": "Introduction (12:30)"
+                    },
+                    {
+                        "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part01.mp3#922.253",
+                        "title": "Introduction (15:22)"
+                    },
+                    {
+                        "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part01.mp3#1416.347",
+                        "title": "Introduction (23:36)"
+                    },
+                    {
+                        "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part01.mp3#1882.12",
+                        "title": "Introduction (31:22)"
+                    },
+                    {
+                        "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part01.mp3#2252.413",
+                        "title": "Introduction (37:32)"
+                    },
+                    {
+                        "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part01.mp3#2687.36",
+                        "title": "Introduction (44:47)"
+                    },
+                    {
+                        "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part01.mp3#3146.707",
+                        "title": "Introduction (52:26)"
+                    },
+                    {
+                        "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part01.mp3#3470.04",
+                        "title": "Introduction (57:50)"
+                    }
+                ],
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part01.mp3",
+                "title": "Introduction"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part02.mp3",
+                "title": "Track 1"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part02.mp3#500.373",
+                "title": "Track 2"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part02.mp3#891.107",
+                "title": "Track 3"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part02.mp3#1337.307",
+                "title": "Track 4"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part02.mp3#1466.44",
+                "title": "Track 5"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part02.mp3#1905.773",
+                "title": "Track 6"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part02.mp3#2360.413",
+                "title": "Track 7"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part02.mp3#2574.093",
+                "title": "Track 8"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part02.mp3#3000.933",
+                "title": "Track 9"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part02.mp3#3349.627",
+                "title": "Track 10"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part03.mp3",
+                "title": "Track 1"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part03.mp3#392.32",
+                "title": "Track 2"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part03.mp3#787.747",
+                "title": "Track 3"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part03.mp3#974.827",
+                "title": "Track 4"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part03.mp3#1357.627",
+                "title": "Track 5"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part03.mp3#1545.68",
+                "title": "Track 6"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part03.mp3#1950.347",
+                "title": "Track 7"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part03.mp3#2390.92",
+                "title": "Track 8"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part03.mp3#2837.4",
+                "title": "Track 9"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part03.mp3#3325.933",
+                "title": "Track 10"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part03.mp3#3793.64",
+                "title": "Track 11"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part04.mp3",
+                "title": "Track 1"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part04.mp3#472.267",
+                "title": "Track 2"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part04.mp3#934.2",
+                "title": "Track 3"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part04.mp3#1372.787",
+                "title": "Track 4"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part04.mp3#1603.0529999999999",
+                "title": "Track 5"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part04.mp3#2034.653",
+                "title": "Track 6"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part04.mp3#2528.12",
+                "title": "Track 7"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part04.mp3#2969.507",
+                "title": "Track 8"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part04.mp3#3341.347",
+                "title": "Track 9"
+            },
+            {
+                "path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part04.mp3#3799.787",
+                "title": "Track 10"
+            }
+        ]
+    },
+    "-odread-anchor": null,
+    "-odread-bank-scope": "title-a6c580b5b",
+    "-odread-bank-verification-token": "4efec5dba9237b5362a624da4ff4eea4dfa1ef524d6412c3",
+    "-odread-bonafides-d": "eyJvdXRsZXQiOiJsaXN0ZW4iLCJ0b2tlbiI6IjRlZmVjNWRiYTkyMzdiNTM2MmE2MjRkYTRmZjRlZWE0ZGZhMWVmNTI0ZDY0MTJjMyIsImFjY2VzcyI6ImYiLCJleHBpcmVzIjoxNzAxMzAyMzk5LCJ0aGVtZSI6ImRld2V5Iiwic3luYyI6MSwicHBhcmFtIjoibGliLTg2NyIsInRkYXRhIjp7ImNvZGV4Ijp7InRpdGxlIjp7InRpdGxlSWQiOiIxMTQ1NzQiLCJzbHVnIjoiMTE0NTc0IiwiY292ZXIiOnsiaW1hZ2VVUkwiOiJodHRwczovL2xpYmJ5YXBwLmNvbS9jb3ZlcnMvcmVzaXplP3R5cGU9YXV0byZ3aWR0aD01MzYmcXVhbGl0eT04MCZmb3JjZT10cnVlJmhlaWdodD01MzYmdXJsPSUyRkltYWdlVHlwZS00MDAlMkYxMTkxLTElMkZFNDUlMkZFRjAlMkYwQyUyRiUyNTdCRTQ1RUYwMEMtRTZBRS00NzNBLUI4NkQtQzgzQ0U3NEVBMDk3JTI1N0RJbWc0MDAuanBnIiwiY29sb3IiOiIjRjlGN0UyIn19LCJsb2FuIjp7InBzbktleSI6IjY4NDQ0NTg0LTExNDU3NCIsInNsdWciOiI2ODQ0NDU4NC0xMTQ1NzQifSwibGlicmFyeSI6eyJrZXkiOiJlLWluYy1oYXJuZXR0IiwibmFtZSI6IkUtaU5DIExpYnJhcnkiLCJsb2dvVVJMIjoiaHR0cHM6Ly90aHVuZGVyLmNkbi5vdmVyZHJpdmUuY29tL2xvZ29zL2NydXNoZWQvMjg2OS5wbmc/MSIsImNvbG9ycyI6WyIjNTczNzMwIiwiIzJmMmU3YyJdfX0sImRld2V5LXVybCI6Imh0dHBzOi8vbGliYnlhcHAuY29tIiwic3BlYyI6IlYyMiIsInRodW5kZXIiOiJodHRwczovL3RodW5kZXIuYXBpLm92ZXJkcml2ZS5jb20ifSwidmVyc2lvbiI6bnVsbCwidGltZSI6MTcwMDYxNDk4OCwiYnVpZCI6ImE2YzU4MGI1YmFhMjQ5M2U4MWU0NjhlZDFlNjU0Njk2IiwiX2MiOiIxNzAwNjE0OTg5MTY4In0=--a47660ea73211b3f1f9fec59bdb6f3eac94d7137",
+    "-odread-bonafides-m": null,
+    "-odread-bonafides-p": "lib-867",
+    "-odread-bonafides-s": null,
+    "-odread-buid": "a6c580b5baa2493e81e468ed1e654696",
+    "-odread-cover-color": [
+        99,
+        182,
+        166
+    ],
+    "-odread-cover-ratio": 0.75,
+    "-odread-crid": [
+        "E45EF00C-E6AE-473A-B86D-C83CE74EA097"
+    ],
+    "-odread-furbish-uri": "/_d/cover/buid/a6c580b5baa2493e81e468ed1e654696",
+    "-odread-msg-access": "f",
+    "-odread-msg-expires": 1701302399,
+    "-odread-msg-sync": true,
+    "-odread-uilinks": {
+        "DICTIONARYCOM": "http://dictionary.reference.com",
+        "HELPAUD": "http://help.overdrive.com/customer/portal/articles/1748757",
+        "HELPCOMPAT": "http://help.overdrive.com/customer/portal/articles/1481258",
+        "HELPOLM": "http://help.overdrive.com/customer/portal/articles/1481524",
+        "HELPWIP": "https://www.overdrive.com",
+        "LEXISNEXIS": "http://lexisnexis.com/en-us/home.page",
+        "ODHOME": "https://www.overdrive.com",
+        "ODREADINFO": "https://www.overdrive.com",
+        "ODSEARCH": "https://www.overdrive.com/search?q=",
+        "SSPULSEIT": "http://www.pulseit.com",
+        "SSXOXO": "http://xoxoafterdark.com"
+    },
+    "rendition-format": "audiobook",
+    "spine": [
+        {
+            "audio-bitrate": 64,
+            "audio-duration": 3806.066875,
+            "media-type": "audio/mpeg",
+            "-odread-file-bytes": 30448535,
+            "-odread-original-path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part01.mp3",
+            "-odread-spine-position": 0,
+            "path": "%7BE45EF00C-E6AE-473A-B86D-C83CE74EA097%7DFmt425-Part01.mp3?cmpt=eyJzcGluZSI6MH0%3D--db3597318affe130ca1b5ec604ac626254ad6f7a"
+        },
+        {
+            "audio-bitrate": 64,
+            "audio-duration": 3513.182,
+            "media-type": "audio/mpeg",
+            "-odread-file-bytes": 28105456,
+            "-odread-original-path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part02.mp3",
+            "-odread-spine-position": 1,
+            "path": "%7BE45EF00C-E6AE-473A-B86D-C83CE74EA097%7DFmt425-Part02.mp3?cmpt=eyJzcGluZSI6MX0%3D--f5d35a880e04ac3eb1b9c584b044b07ae0ba43f9"
+        },
+        {
+            "audio-bitrate": 64,
+            "audio-duration": 4136.17625,
+            "media-type": "audio/mpeg",
+            "-odread-file-bytes": 33089410,
+            "-odread-original-path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part03.mp3",
+            "-odread-spine-position": 2,
+            "path": "%7BE45EF00C-E6AE-473A-B86D-C83CE74EA097%7DFmt425-Part03.mp3?cmpt=eyJzcGluZSI6Mn0%3D--197a5e6ded8ba40c96ccf97e2794f75ed1ab4376"
+        },
+        {
+            "audio-bitrate": 64,
+            "audio-duration": 4214.0995,
+            "media-type": "audio/mpeg",
+            "-odread-file-bytes": 33712796,
+            "-odread-original-path": "{E45EF00C-E6AE-473A-B86D-C83CE74EA097}Fmt425-Part04.mp3",
+            "-odread-spine-position": 3,
+            "path": "%7BE45EF00C-E6AE-473A-B86D-C83CE74EA097%7DFmt425-Part04.mp3?cmpt=eyJzcGluZSI6M30%3D--15c811e11059e0af81edb252480411f46828e704"
+        }
+    ],
+    "title": {
+        "main": "The Indian In the Cupboard"
+    }
+}
