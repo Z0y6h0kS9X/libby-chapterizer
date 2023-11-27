@@ -69,19 +69,24 @@ func main() {
 		return
 	}
 
-	var authors []string
-	var narrators []string
+	// var authors []string
+	// var narrators []string
+	// var authorRegex = regexp.MustCompile(`^aut(hor)?$`)
+	// var narratorRegex = regexp.MustCompile(`^n(arrator|rt)?$`)
 
-	for _, creator := range book.Creator {
-		if creator.Role == "author" {
-			authors = append(authors, creator.Name)
-		} else if creator.Role == "narrator" {
-			narrators = append(narrators, creator.Name)
-		}
-	}
+	// for _, creator := range book.Creator {
+	// 	if authorRegex.MatchString(creator.Role) {
+	// 		authors = append(authors, creator.Name)
+	// 	} else if narratorRegex.MatchString(creator.Role) {
+	// 		narrators = append(narrators, creator.Name)
+	// 	}
+	// }
 
-	authorString := strings.Join(authors, ", ")
-	narratorString := strings.Join(narrators, ", ")
+	// authorString := strings.Join(authors, ", ")
+	// narratorString := strings.Join(narrators, ", ")
+
+	author := p.GetPrimaryAuthor(book)
+	narrator := p.GetPrimaryNarrator(book)
 
 	// Gets the directory path from the json path
 	var fileDir string
@@ -95,24 +100,35 @@ func main() {
 	fmt.Println("Looking up Book ASIN...")
 
 	// Gets the ASIN
-	asin, err := prov.GetBook(book.Title.Main, authorString, narratorString)
+	asin, err := prov.GetBook(book.Title.Main, author, narrator)
 	if err != nil {
 		fmt.Println("Error getting book:", err)
 		return
 	}
 
+	details := p.BookDetails{}
+	// If there is no ASIN, create details manually using openbook
 	if asin == "" {
 		fmt.Println("No ASIN found")
-		return
+
+		details, err = p.GetBookDetailsNoASIN(book)
+
+		// Prints the details
+		fmt.Println("Details:")
+		fmt.Println("Title:", details.Title)
+		fmt.Println("Author:", details.Authors[0].Name)
+		fmt.Println("Narrator:", details.Narrators[0].Name)
+		fmt.Println("Series:", details.SeriesPrimary.Name)
+		fmt.Println("Subtitle:", details.Subtitle)
+
 	} else {
 		fmt.Println("ASIN:", asin)
-	}
-
-	// Gets the book details
-	details, err := prov.GetBookDetails(asin)
-	if err != nil {
-		fmt.Println("Error getting book details:", err)
-		return
+		// Gets the book details
+		details, err = prov.GetBookDetailsASIN(asin)
+		if err != nil {
+			fmt.Println("Error getting book details:", err)
+			return
+		}
 	}
 
 	// Checks if the user specified an output path
@@ -183,8 +199,8 @@ func main() {
 		fmt.Println("Series:", details.SeriesPrimary.Name)
 		fmt.Println("Book Number:", details.SeriesPrimary.Position)
 	}
-	fmt.Println("Author:", authorString)
-	fmt.Println("Narrator:", narratorString)
+	fmt.Println("Author:", author)
+	fmt.Println("Narrator:", narrator)
 	fmt.Println("Duration:", duration)
 	fmt.Println("============================")
 

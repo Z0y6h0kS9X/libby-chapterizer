@@ -49,12 +49,17 @@ func GetBook(title, author, narrator string) (string, error) {
 		return "", fmt.Errorf("error decoding response: %w", err)
 	}
 
-	// Return first book's ASIN
-	return rsp.Products[0].ASIN, nil
+	// Check if any books were found
+	if len(rsp.Products) == 0 {
+		return "", nil
+	} else {
+		return rsp.Products[0].ASIN, nil
+	}
+
 }
 
-// GetBookDetails retrieves the details of a book with the given ASIN.
-func GetBookDetails(asin string) (meta.BookDetails, error) {
+// GetBookDetailsASIN retrieves the details of a book with the given ASIN.
+func GetBookDetailsASIN(asin string) (meta.BookDetails, error) {
 
 	// Construct the request URL
 	requestURL := fmt.Sprintf("https://api.audnex.us/books/%s", asin)
