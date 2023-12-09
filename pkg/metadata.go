@@ -130,16 +130,41 @@ type Chapters struct {
 }
 
 type Process struct {
-	Title    string
-	Source   string
-	Output   string
-	Start    float64
-	End      float64
-	Duration string
-	Command  *exec.Cmd
+	Title       string
+	Source      string
+	Output      string
+	Start       float64
+	End         float64
+	DurationStr string
+	Duration    Duration
+	Command     *exec.Cmd
+}
+
+type Duration struct {
+	Hours             int
+	Minutes           int
+	Seconds           int
+	Milliseconds      int
+	TotalMilliseconds float64
+}
+
+type M3U struct {
+	PlaylistTitle string
+	Author        string
+	Items         []struct {
+		Length   int
+		LengthMS int
+		Title    string
+		FileName string
+	}
 }
 
 func (p Process) ToString() string {
 	// return a string representation of the Process struct
 	return fmt.Sprintf("Source: %s, Title: %s, Start: %f, End: %f", p.Source, p.Title, p.Start, p.End)
+}
+
+func (d Duration) ToString() string {
+	// return a string representation of the Duration struct
+	return fmt.Sprintf("%02d:%02d:%02d.%03d\n", d.Hours, d.Minutes, d.Seconds, d.Milliseconds)
 }

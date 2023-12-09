@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -85,20 +86,55 @@ func GetFileDuration(filepath string) (float64, error) {
 
 	// Return the duration
 	return duration, nil
+
+}
+
+func GetFileDurationMS(filepath string) (int, error) {
+
+	// Create a new exec.Command with the ffprobe command and arguments
+	cmd := exec.Command("ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", filepath)
+
+	// Run the command and capture the stdout
+	stdout, err := cmd.Output()
+	if err != nil {
+		return 0, fmt.Errorf("error running ffprobe command: %w", err)
+	}
+
+	// Trim any leading or trailing whitespace from the stdout and convert it to a float
+	float, err := strconv.ParseFloat(strings.TrimSpace(string(stdout)), 64)
+	if err != nil {
+		fmt.Println()
+	}
+
+	// Converts the duration to milliseconds
+	var duration int = int(float * 1000)
+
+	// Return the duration
+	return duration, nil
+
 }
 
 // MakeCombinedMP3 concatenates multiple MP3 files into a single output file.
 // It takes a slice of file paths and the path of the output file as input.
 // It returns an error if the operation fails.
-func MakeCombinedMP3(files []string, outputFile string) error {
+func MakeCombinedMP3(files []string, metadataFile, outputFile string) error {
 
-	fmt.Println("Making combined MP3...")
+	fmt.Println("Making temp MP3...")
 
 	// Create a slice to store the command line arguments
 	var args []string
 
 	// Append the input file paths to the arguments slice using the "concat" format
-	args = append(args, "-i", "concat:"+strings.Join(files, "|"))
+	concatPath := strings.Join(files, "|")
+	concatPath = filepath.FromSlash(concatPath)
+	concatPath = strings.ReplaceAll(concatPath, "[", "`[")
+	concatPath = strings.ReplaceAll(concatPath, "]", "`]")
+	args = append(args, "-i", "concat:"+concatPath)
+
+	// Adds the metadata file to the arguments, if it exists
+	if metadataFile != "" {
+		args = append(args, "-i", metadataFile)
+	}
 
 	// Set the audio codec to "copy" to preserve the original audio codecs
 	args = append(args, "-acodec", "copy", outputFile)

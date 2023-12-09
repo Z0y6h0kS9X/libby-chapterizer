@@ -30,20 +30,71 @@ var jsonPath string
 var outPath string
 var test bool
 var audibleChapters bool
+var single bool
+var format string
 
 func init() {
 	rootCmd.Flags().StringVarP(&jsonPath, "json", "j", "", "The path to the openbook.json file")
 	rootCmd.Flags().StringVarP(&outPath, "out", "o", "", "The path to the directory you want to output the files to")
 	rootCmd.Flags().BoolVarP(&test, "test", "t", false, "Test mode")
 	rootCmd.Flags().BoolVarP(&audibleChapters, "use-audible-chapters", "c", false, "Specifies to override default breaks and use audible markers instead")
+	rootCmd.Flags().BoolVarP(&single, "single", "s", false, "Indicates if you want the output as a single file, or sepearate files for each chapter")
+	rootCmd.Flags().StringVarP(&format, "format", "f", "mp3", "What format you want the output in (mp3|m4b)")
 }
 
 func main() {
-	// fmt.Println("Hello, World!")
 
+	// Parses the flags
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
+	}
+
+	if test {
+		fmt.Println("Test mode enabled. Exiting...")
+
+		// Creates a generic playlist object
+		playlist := p.Playlist{
+			Title:     "TestTitle",
+			Author:    "TestAuthor",
+			BookTitle: "TestBook",
+			Tracks: []p.Track{
+				{
+					Title:    "Chapter 1",
+					Length:   27,
+					LengthMS: 27000,
+					File:     "[01]. Chapter 1.mp3",
+				},
+				{
+					Title:    "Chapter 2",
+					Length:   54,
+					LengthMS: 54380,
+					File:     "[02]. Chapter 2.mp3",
+				},
+			},
+		}
+
+		playlist.WriteM3UFile("F:/Music/Audiobook/Output/Gary Paulsen/Hatchet/[04.0]. Brian's Return (B00771TZ92)/generated.m3u")
+		playlist.WriteFFMPEGMetadataFile("F:/Music/Audiobook/Output/Gary Paulsen/Hatchet/[04.0]. Brian's Return (B00771TZ92)/metadata-generated.txt")
+
+		// Parses the m3u file
+		// playlist, err := p.ReadExtM3U("F:/Music/Audiobook/Output/Gary Paulsen/Hatchet/[04.0]. Brian's Return (B00771TZ92)/Brian's Return-mod.m3u")
+		// if err != nil {
+		// 	fmt.Println(err)
+		// 	os.Exit(1)
+		// }
+
+		// fmt.Println("----------")
+		// fmt.Println("Playlist:")
+		// fmt.Println("----------")
+		// fmt.Println("Playlist Title:", playlist.Title)
+		// for _, track := range playlist.Tracks {
+		// 	fmt.Printf("Track Title: %s | Track Length: %d | Track Length MS: %d\nFile: %s\n", track.Title, track.Length, track.LengthMS, track.File)
+		// }
+
+		// Ends program execution
+		os.Exit(0)
+
 	}
 
 	// Imports JSON files
@@ -68,22 +119,6 @@ func main() {
 		fmt.Println("Error unmarshalling JSON:", err)
 		return
 	}
-
-	// var authors []string
-	// var narrators []string
-	// var authorRegex = regexp.MustCompile(`^aut(hor)?$`)
-	// var narratorRegex = regexp.MustCompile(`^n(arrator|rt)?$`)
-
-	// for _, creator := range book.Creator {
-	// 	if authorRegex.MatchString(creator.Role) {
-	// 		authors = append(authors, creator.Name)
-	// 	} else if narratorRegex.MatchString(creator.Role) {
-	// 		narrators = append(narrators, creator.Name)
-	// 	}
-	// }
-
-	// authorString := strings.Join(authors, ", ")
-	// narratorString := strings.Join(narrators, ", ")
 
 	author := p.GetPrimaryAuthor(book)
 	narrator := p.GetPrimaryNarrator(book)
@@ -204,24 +239,34 @@ func main() {
 	fmt.Println("Duration:", duration)
 	fmt.Println("============================")
 
-	if test {
-		fmt.Println("Test mode enabled. Exiting...")
-		os.Exit(0)
-
-	}
-
 	var ProcessBlock []p.Process
 
 	var tempFile string
+
+	// // If either use-audible-chapters or single flag is set, create the combined MP3 file
+	// if audibleChapters || single {
+
+	// 	// Set the output path for the combined MP3 file
+	// 	fileName := fmt.Sprintf("%s (%s)", p.NormalizeName(book.Title.Main), asin)
+	// 	tempFile = path.Join(outputPath, fileName+"_temp.mp3")
+
+	// 	// Call the MakeCombinedMP3 function to create the combined MP3 file
+	// 	err = p.MakeCombinedMP3(mp3Files, tempFile)
+	// 	if err != nil {
+	// 		fmt.Println("Error making combined MP3:", err)
+	// 		return
+	// 	}
+
+	// }
 
 	if audibleChapters {
 
 		// Set the output path for the combined MP3 file
 		fileName := fmt.Sprintf("%s (%s)", p.NormalizeName(book.Title.Main), asin)
-		tempFile = path.Join(outputPath, fileName+".mp3")
+		tempFile = path.Join(outputPath, fileName+"_temp.mp3")
 
 		// Call the MakeCombinedMP3 function to create the combined MP3 file
-		err = p.MakeCombinedMP3(mp3Files, tempFile)
+		err = p.MakeCombinedMP3(mp3Files, "", tempFile)
 		if err != nil {
 			fmt.Println("Error making combined MP3:", err)
 			return
@@ -255,7 +300,7 @@ func main() {
 			process.Source = tempFile
 			process.Start = start
 			process.End = end
-			process.Duration = p.FormatDuration(dur)
+			process.DurationStr = p.FormatDuration(dur)
 			process.Title = title
 			process.Command = cmd
 			process.Output = path.Join(outputPath, "["+iteration+"]. "+outputFileNormal+".mp3")
@@ -348,7 +393,7 @@ func main() {
 			// Adds the Process object properties
 			process.Title = toc.Title
 			process.Start = seconds
-			process.Duration = dur
+			process.DurationStr = dur
 			process.Command = cmd
 			process.Output = path.Join(outputPath, "["+iteration+"]. "+outputFileNormal+".mp3")
 
@@ -359,15 +404,31 @@ func main() {
 	}
 
 	// Runs the commands to generate the output files
-	var m3u []string
-	m3u = append(m3u, "#EXTM3U")
-	m3u = append(m3u, fmt.Sprintf("#PLAYLIST: %s", book.Title.Main))
+	// Starts building the m3u file
+	// var m3u []string
+	// m3u = append(m3u, "#EXTM3U")
+	// m3u = append(m3u, fmt.Sprintf("#PLAYLIST: %s", book.Title.Main))
+
+	// Starts building the metadata file
+	// var metadata []string
+	// metadata = append(metadata, ";FFMETADATA1")
+	// metadata = append(metadata, fmt.Sprintf("title=%s", book.Title.Main))
+	// metadata = append(metadata, fmt.Sprintf("artist=%s", author))
+	// metadata = append(metadata, fmt.Sprintf("\n"))
+
+	// durMS := 0
+	playlist := p.Playlist{}
+
+	// Sets the top level playlist properties
+	playlist.Title = book.Title.Main
+	playlist.Author = author
+	playlist.BookTitle = book.Title.Main
 
 	for _, process := range ProcessBlock {
 
 		_, file := path.Split(process.Output)
 
-		fmt.Printf("Processing Item: %s (%s)\n", process.Title, process.Duration)
+		fmt.Printf("Processing Item: %s (%s)\n", process.Title, process.DurationStr)
 		newCmd := process.Command
 		newCmd.Args = append(newCmd.Args, process.Output)
 
@@ -378,20 +439,121 @@ func main() {
 			return
 		}
 
-		m3u = append(m3u, fmt.Sprintf("#EXTINF:,%s\n%s", process.Title, file))
+		// Gets duration of the output file
+		durationMS, err := p.GetFileDurationMS(process.Output)
+		if err != nil {
+			fmt.Println("Error getting duration:", err)
+			return
+		}
+
+		length := int(durationMS / 1000)
+
+		playlist.Tracks = append(playlist.Tracks, p.Track{Title: process.Title, File: file, Length: length, LengthMS: durationMS})
+
+		// Adds entry to the m3u file
+		// m3u = append(m3u, fmt.Sprintf("#EXTINF:,%s\n%s", process.Title, file))
+
+		// Generates Process Block metadata
+		// dur, err := p.GetFileDurationMS(process.Output)
+		// if err != nil {
+		// 	fmt.Println("Error getting duration:", err)
+		// 	return
+		// }
+		// metadata = append(metadata, p.GenerateChapterBlock(file, process.Title, dur, durMS))
+		// durMS += dur
 
 	}
 
-	content := strings.Join(m3u, "\n")
-	err = os.WriteFile(path.Join(outputPath, p.NormalizeName(book.Title.Main)+".m3u"), []byte(content), 0644)
-	if err != nil {
-		fmt.Println("Error writing file:", err)
-		return
-	}
+	// Writes the playlist out in M3u and FFMPEG formats
+	playlist.WriteM3UFile(path.Join(outputPath, p.NormalizeName(book.Title.Main)+".m3u"))
+	playlist.WriteFFMPEGMetadataFile(path.Join(outputPath, "metadata.txt"))
 
-	// removes the tempFile if it exists
-	if _, err := os.Stat(tempFile); err == nil {
-		os.Remove(tempFile)
+	// // Gets the list of files in the output directory
+	// mp3s, err := p.GetAllMp3Files(outputPath)
+	// if err != nil {
+	// 	fmt.Println("Error getting mp3 files:", err)
+	// 	return
+	// }
+
+	// content := strings.Join(m3u, "\n")
+	// err = os.WriteFile(path.Join(outputPath, p.NormalizeName(book.Title.Main)+".m3u"), []byte(content), 0644)
+	// if err != nil {
+	// 	fmt.Println("Error writing M3U file:", err)
+	// 	return
+	// }
+
+	// content = strings.Join(metadata, "\n")
+	// err = os.WriteFile(path.Join(outputPath, "metadata.txt"), []byte(content), 0644)
+	// if err != nil {
+	// 	fmt.Println("Error writing metadata file:", err)
+	// 	return
+	// }
+
+	if single {
+
+		fmt.Println("Generating combined chapterized file...")
+
+		fileName := fmt.Sprintf("%s (%s)", p.NormalizeName(book.Title.Main), asin)
+		outCombined := path.Join(outputPath, fileName+"."+format)
+
+		var input string
+
+		// Converts the temp mp3 into an m4b file with chapters
+		if _, err := os.Stat(tempFile); err == nil {
+
+			// sets the input to the temp file
+			input = tempFile
+
+		} else {
+
+			// Converts with concat commands
+			mp3s, err := p.GetAllMp3Files(outputPath)
+			if err != nil {
+				fmt.Println("Error getting mp3 files:", err)
+				return
+			}
+
+			// Gets the list of files in the output directory
+			var concat []string
+			for _, mp3 := range mp3s {
+				concat = append(concat, path.Join(outputPath, mp3))
+			}
+
+			// Sets the input to the concat command
+			input = "concat:" + strings.Join(concat, "|")
+
+		}
+
+		if format == "m4b" {
+			cmd := exec.Command("ffmpeg", "-i", input, "-i", path.Join(outputPath, "metadata.txt"), "-acodec", "aac", "-strict", "experimental", "-ac", "1", "-vn", outCombined)
+
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				fmt.Println("Error running command:", err)
+				fmt.Println("Command Output: ", string(output))
+				return
+			}
+		} else if format == "mp3" {
+			fmt.Println("MP3's do not support chapters, only Top Level Metadata will be added")
+			err = p.MakeCombinedMP3(mp3Files, "", tempFile)
+			if err != nil {
+				fmt.Println("Error making combined MP3:", err)
+				return
+			}
+		} else {
+			fmt.Println("Invalid format:", format)
+			return
+		}
+
+	} else {
+
+		// removes the tempFile if it exists
+		if _, err := os.Stat(tempFile); err == nil {
+			os.Remove(tempFile)
+		}
+
 	}
 
 }
+
+// ffmpeg  -i "concat:chapter1.mp3|chapter2.mp3|chapter3.mp3|chapter4.mp3" -i .\metadata.txt -acodec aac -strict experimental -ac 1 -vn output_with_chapters.m4b

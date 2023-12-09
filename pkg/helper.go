@@ -3,8 +3,10 @@ package pkg
 import (
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -241,3 +243,64 @@ func GetPrimaryNarrator(book Openbook) string {
 	}
 
 }
+
+func GetTimeBreakdown(input int) (hours, minutes, seconds, milliseconds int) {
+
+	// Calculate hours, minutes, seconds, and milliseconds
+	hours = (input / (1000 * 60 * 60)) % 24
+	minutes = (input / (1000 * 60)) % 60
+	seconds = (input / 1000) % 60
+	milliseconds = input % 1000
+
+	// Returns the values
+	return hours, minutes, seconds, milliseconds
+}
+
+// GetAllMp3Files returns a list of all the .mp3 files in the given directory and its subdirectories.
+// The function takes a `path` parameter, which is the directory path to search for .mp3 files.
+// It returns a slice of strings containing the absolute paths of the .mp3 files found, and an error if any.
+func GetAllMp3Files(path string) ([]string, error) {
+
+	var mp3Files []string
+	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		// Check if the current file has a .mp3 extension
+		if strings.HasSuffix(path, ".mp3") {
+			mp3Files = append(mp3Files, path)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// return the list of .mp3 files
+	return mp3Files, nil
+}
+
+func GenerateChapterBlock(file, title string, duration, lastTimeMS int) string {
+
+	// Gets the start time of the file
+	start := lastTimeMS
+	end := start + duration
+
+	// Creates the chapter block
+	chapterBlock := fmt.Sprintf("[CHAPTER]\nTIMEBASE=1/1000\nSTART=%d\nEND=%d\ntitle=%s\n", start, end, title)
+
+	// Returns the chapter block
+	return chapterBlock
+
+}
+
+// func GetTitleFromFilename(filename string) string {
+
+// 	// Discard everything up to and including 'Fmt425-'
+// 	index := strings.Index(filename, "Fmt425-")
+// 	title := ""
+// 	if index != -1 {
+// 		title = filename[index+len("Fmt425-"):]
+// 	}
+
+// 	return title
+
+// }
