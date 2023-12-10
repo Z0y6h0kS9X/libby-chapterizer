@@ -339,16 +339,21 @@ func JSONFileToOpenBook(jsonPath string) (Openbook, error) {
 // }
 
 // Needs rework
-func CalculateDuration(minutes int) Duration {
+func CalculateDuration(milliseconds int) Duration {
+
+	// Creates a new Duration object
 	duration := Duration{}
+	temp := time.Duration(milliseconds) * time.Millisecond
 
-	duration.Hours = minutes / 60
-	duration.Minutes = minutes % 60
-	duration.Seconds = duration.Minutes * 60
-	duration.Milliseconds = duration.Seconds * 1000
-	duration.TotalMinutes = minutes
-	duration.TotalSeconds = duration.Seconds
-	duration.TotalMilliseconds = float64(duration.Milliseconds)
+	// Sets duration properties
+	duration.Hours = int(temp.Hours())
+	duration.Minutes = int(temp.Minutes()) % 60
+	duration.Seconds = int(temp.Seconds()) % 60
+	duration.Milliseconds = int(temp.Nanoseconds()/int64(time.Millisecond)) % 1000
+	duration.TotalMinutes = int(temp.Minutes())
+	duration.TotalSeconds = int(temp.Seconds())
+	duration.TotalMilliseconds = milliseconds
 
+	// returns duration
 	return duration
 }

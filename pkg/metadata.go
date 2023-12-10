@@ -150,7 +150,7 @@ type Duration struct {
 	Milliseconds      int
 	TotalMinutes      int
 	TotalSeconds      int
-	TotalMilliseconds float64
+	TotalMilliseconds int
 }
 
 type M3U struct {
@@ -171,7 +171,7 @@ func (p Process) ToString() string {
 
 func (d Duration) ToString() string {
 	// return a string representation of the Duration struct
-	return fmt.Sprintf("%02d:%02d:%02d.%03d\n", d.Hours, d.Minutes, d.Seconds, d.Milliseconds)
+	return fmt.Sprintf("%02d:%02d:%02d.%03d", d.Hours, d.Minutes, d.Seconds, d.Milliseconds)
 }
 
 func (o Openbook) CalculateRuntime() int {
@@ -210,6 +210,7 @@ type Metadata struct {
 	Duration  Duration
 	Summary   string
 	Abridged  bool
+	Chapters  Chapters
 }
 
 func GetMetadataFromASIN(asin string) (Metadata, error) {
@@ -248,6 +249,23 @@ func GetMetadataFromASIN(asin string) (Metadata, error) {
 		metadata.Publisher = publisher
 	}
 
+	// Gets the summary and assigns it
+	if summary, ok := rsp["summary"].(string); ok {
+		metadata.Summary = summary
+	}
+
+	// Gets the abridged status and assigns it
+	if abridged, ok := rsp["abridged"].(string); ok {
+		switch abridged {
+		case "abridged":
+			metadata.Abridged = true
+		case "unabridged":
+			metadata.Abridged = false
+		default:
+			return metadata, fmt.Errorf("error decoding abridged status")
+		}
+	}
+
 	// Gets the primary authors name and assigns it
 	if authors, ok := rsp["authors"].([]interface{}); ok && len(authors) > 0 {
 		authorObj, ok := authors[0].(map[string]interface{})
@@ -280,40 +298,45 @@ func GetMetadataFromASIN(asin string) (Metadata, error) {
 	// Gets the publisher and assigns it
 	var duration Duration
 	if mins, ok := rsp["runtimeLengthMin"].(int); ok {
-		duration = CalculateDuration(mins)
+		// Converts minutes to milliseconds and generates duration
+		duration = CalculateDuration(mins * 60000)
 	} else if mins, ok := rsp["runtimeLengthMin"].(float64); ok {
-		duration = CalculateDuration(int(mins))
+		// Converts minutes to milliseconds and generates duration
+		duration = CalculateDuration(int(mins * 60000))
 	} else {
 		fmt.Println("Invalid runtimeLengthMin type")
 	}
 
 	metadata.Duration = duration
 
+	// Construct the request URL
+	requestURL = fmt.Sprintf("https://api.audnex.us/books/%s/chapters", asin)
+
+	// Send an HTTP GET request to the API
+	response, err = http.Get(requestURL)
+	if err != nil {
+		return metadata, fmt.Errorf("error making request: %w", err)
+	}
+	defer response.Body.Close()
+
+	// Decode the JSON response into a Chapters struct
+	var chp Chapters
+	if err := json.NewDecoder(response.Body).Decode(&chp); err != nil {
+		return metadata, fmt.Errorf("error decoding response: %w", err)
+	}
+
+	// Adds the chapters to the metadata
+	metadata.Chapters = chp
+
+	// Returns the metadata
 	return metadata, nil
-
-	// // Construct the request URL
-	// requestURL = fmt.Sprintf("https://api.audnex.us/books/%s/chapters", asin)
-
-	// // Send an HTTP GET request to the API
-	// response, err = http.Get(requestURL)
-	// if err != nil {
-	// 	return meta.Chapters{}, fmt.Errorf("error making request: %w", err)
-	// }
-	// defer response.Body.Close()
-
-	// // Decode the JSON response into a Chapters struct
-	// var rsp meta.Chapters
-	// if err := json.NewDecoder(response.Body).Decode(&rsp); err != nil {
-	// 	return meta.Chapters{}, fmt.Errorf("error decoding response: %w", err)
-	// }
-
-	// // Return the chapters
-	// return rsp, nil
 
 }
 
+func GetMetadataLocal(file string) (Metadata, error)
+
 func (m Metadata) ToString() string {
 
-	return fmt.Sprintf("ASIN:      %s\nTitle:     %s\nAuthor:    %s\nSeries:    %s\nPosition:  %f\nPublisher: %s\nDuration:  %s", m.ASIN, m.Title, m.Author, m.Series.Name, m.Series.Position, m.Publisher, m.Duration.ToString())
+	return fmt.Sprintf("ASIN:      %s\nTitle:     %s\nAuthor:    %s\nSeries:    %s\nPosition:  %f\nPublisher: %s\nChapters:  %d\nDuration:  %s\nAbridged:  %t\nSummary:   %s", m.ASIN, m.Title, m.Author, m.Series.Name, m.Series.Position, m.Publisher, len(m.Chapters.Chapters), m.Duration.ToString(), m.Abridged, m.Summary)
 
 }

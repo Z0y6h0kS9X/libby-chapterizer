@@ -52,7 +52,16 @@ func main() {
 			os.Exit(1)
 		}
 
+		fmt.Println("Metadata (ASIN):")
 		fmt.Println(meta.ToString())
+
+		// Get metadata from file
+
+		// fmt.Println("First Chapter Info:")
+		// fmt.Println("Title:", meta.Chapters.Chapters[1].Title)
+		// fmt.Println("Start:", meta.Chapters.Chapters[1].StartOffsetMs)
+		// fmt.Println("Duration:", meta.Chapters.Chapters[1].LengthMs)
+		// fmt.Println("End:", meta.Chapters.Chapters[1].LengthMs+meta.Chapters.Chapters[1].StartOffsetMs)
 
 		// fmt.Println("Test mode enabled. Exiting...")
 
