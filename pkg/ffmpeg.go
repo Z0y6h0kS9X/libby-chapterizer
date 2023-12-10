@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -117,24 +116,21 @@ func GetFileDurationMS(filepath string) (int, error) {
 // MakeCombinedMP3 concatenates multiple MP3 files into a single output file.
 // It takes a slice of file paths and the path of the output file as input.
 // It returns an error if the operation fails.
-func MakeCombinedMP3(files []string, metadataFile, outputFile string) error {
+func MakeCombinedMP3(files []string, details BookDetails, outputFile string) error {
 
-	fmt.Println("Making temp MP3...")
+	fmt.Println("Making Combined MP3...")
 
 	// Create a slice to store the command line arguments
 	var args []string
 
 	// Append the input file paths to the arguments slice using the "concat" format
-	concatPath := strings.Join(files, "|")
-	concatPath = filepath.FromSlash(concatPath)
-	concatPath = strings.ReplaceAll(concatPath, "[", "`[")
-	concatPath = strings.ReplaceAll(concatPath, "]", "`]")
-	args = append(args, "-i", "concat:"+concatPath)
+	args = append(args, "-i", "concat:"+strings.Join(files, "|"))
 
-	// Adds the metadata file to the arguments, if it exists
-	if metadataFile != "" {
-		args = append(args, "-i", metadataFile)
-	}
+	// Adds simple metadata to the output file
+	args = append(args, "-metadata", "title="+details.Title)
+	args = append(args, "-metadata", "artist="+details.Authors[0].Name)
+	args = append(args, "-metadata", "album="+details.Title)
+	args = append(args, "-metadata", "ASIN="+details.Asin)
 
 	// Set the audio codec to "copy" to preserve the original audio codecs
 	args = append(args, "-acodec", "copy", outputFile)

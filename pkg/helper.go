@@ -1,7 +1,9 @@
 package pkg
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -265,7 +267,7 @@ func GetAllMp3Files(path string) ([]string, error) {
 	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 		// Check if the current file has a .mp3 extension
 		if strings.HasSuffix(path, ".mp3") {
-			mp3Files = append(mp3Files, path)
+			mp3Files = append(mp3Files, filepath.ToSlash(path))
 		}
 		return nil
 	})
@@ -292,6 +294,37 @@ func GenerateChapterBlock(file, title string, duration, lastTimeMS int) string {
 
 }
 
+func JSONFileToOpenBook(jsonPath string) (Openbook, error) {
+
+	// Creates a new Openbook
+	openBook := Openbook{}
+
+	// Imports JSON files
+	file, err := os.Open(jsonPath)
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return openBook, err
+	}
+	defer file.Close()
+
+	// Reads the file
+	data, err := io.ReadAll(file)
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+		return openBook, err
+	}
+
+	// Unmarshals JSON
+	err = json.Unmarshal(data, &openBook)
+	if err != nil {
+		fmt.Println("Error unmarshalling JSON:", err)
+		return openBook, err
+	}
+
+	return openBook, nil
+
+}
+
 // func GetTitleFromFilename(filename string) string {
 
 // 	// Discard everything up to and including 'Fmt425-'
@@ -304,3 +337,18 @@ func GenerateChapterBlock(file, title string, duration, lastTimeMS int) string {
 // 	return title
 
 // }
+
+// Needs rework
+func CalculateDuration(minutes int) Duration {
+	duration := Duration{}
+
+	duration.Hours = minutes / 60
+	duration.Minutes = minutes % 60
+	duration.Seconds = duration.Minutes * 60
+	duration.Milliseconds = duration.Seconds * 1000
+	duration.TotalMinutes = minutes
+	duration.TotalSeconds = duration.Seconds
+	duration.TotalMilliseconds = float64(duration.Milliseconds)
+
+	return duration
+}

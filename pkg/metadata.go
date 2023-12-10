@@ -1,8 +1,11 @@
 package pkg
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os/exec"
+	"strconv"
 	"time"
 )
 
@@ -145,6 +148,8 @@ type Duration struct {
 	Minutes           int
 	Seconds           int
 	Milliseconds      int
+	TotalMinutes      int
+	TotalSeconds      int
 	TotalMilliseconds float64
 }
 
@@ -167,4 +172,148 @@ func (p Process) ToString() string {
 func (d Duration) ToString() string {
 	// return a string representation of the Duration struct
 	return fmt.Sprintf("%02d:%02d:%02d.%03d\n", d.Hours, d.Minutes, d.Seconds, d.Milliseconds)
+}
+
+func (o Openbook) CalculateRuntime() int {
+
+	// Adds up the audio-duration fields of the spine and returns the total
+	var totalDuration float64
+
+	// Grabs the audio duration (in seconds) of each item in the spine
+	for _, item := range o.Spine {
+		totalDuration += item.AudioDuration
+	}
+
+	// Converts the seconds into minutes
+	totalDuration = totalDuration / 60
+
+	// Returns the total duration in Minutes (to match audnexus format)
+	return int(totalDuration)
+
+}
+
+// type Author struct {
+// 	Asin string `json:"asin"`
+// 	Name string `json:"name"`
+// }
+
+type Metadata struct {
+	ASIN   string
+	Title  string
+	Series struct {
+		Name     string
+		Position float64
+	}
+	Author    string
+	Narrator  string
+	Publisher string
+	Duration  Duration
+	Summary   string
+	Abridged  bool
+}
+
+func GetMetadataFromASIN(asin string) (Metadata, error) {
+
+	// Starts with an empty Metadata struct
+	var metadata Metadata
+
+	// Construct the request URL for the top level metadata
+	requestURL := fmt.Sprintf("https://api.audnex.us/books/%s", asin)
+
+	// Send an HTTP GET request to the API
+	response, err := http.Get(requestURL)
+	if err != nil {
+		return metadata, fmt.Errorf("error making request: %w", err)
+	}
+
+	defer response.Body.Close()
+
+	var rsp map[string]interface{}
+	if err := json.NewDecoder(response.Body).Decode(&rsp); err != nil {
+		return metadata, fmt.Errorf("error decoding response: %w", err)
+	}
+
+	// Gets the ASIN and assigns it
+	if asin, ok := rsp["asin"].(string); ok {
+		metadata.ASIN = asin
+	}
+
+	// Gets the title and assigns it
+	if title, ok := rsp["title"].(string); ok {
+		metadata.Title = title
+	}
+
+	// Gets the publisher and assigns it
+	if publisher, ok := rsp["publisherName"].(string); ok {
+		metadata.Publisher = publisher
+	}
+
+	// Gets the primary authors name and assigns it
+	if authors, ok := rsp["authors"].([]interface{}); ok && len(authors) > 0 {
+		authorObj, ok := authors[0].(map[string]interface{})
+		if !ok {
+			return metadata, fmt.Errorf("error decoding author object")
+		}
+		authorName, ok := authorObj["name"].(string)
+		if !ok {
+			return metadata, fmt.Errorf("error decoding author name")
+		}
+		metadata.Author = authorName
+		// Do something with the first author's name
+	}
+
+	// Gets the series name and position and assigns it
+	if seriesObj, ok := rsp["seriesPrimary"].(map[string]interface{}); ok {
+		seriesName, ok := seriesObj["name"].(string)
+		if !ok {
+			return metadata, fmt.Errorf("error decoding series name")
+		}
+		metadata.Series.Name = seriesName
+
+		metadata.Series.Position, err = strconv.ParseFloat(fmt.Sprint(seriesObj["position"]), 64)
+		if err != nil {
+			return metadata, fmt.Errorf("error decoding series position")
+		}
+
+	}
+
+	// Gets the publisher and assigns it
+	var duration Duration
+	if mins, ok := rsp["runtimeLengthMin"].(int); ok {
+		duration = CalculateDuration(mins)
+	} else if mins, ok := rsp["runtimeLengthMin"].(float64); ok {
+		duration = CalculateDuration(int(mins))
+	} else {
+		fmt.Println("Invalid runtimeLengthMin type")
+	}
+
+	metadata.Duration = duration
+
+	return metadata, nil
+
+	// // Construct the request URL
+	// requestURL = fmt.Sprintf("https://api.audnex.us/books/%s/chapters", asin)
+
+	// // Send an HTTP GET request to the API
+	// response, err = http.Get(requestURL)
+	// if err != nil {
+	// 	return meta.Chapters{}, fmt.Errorf("error making request: %w", err)
+	// }
+	// defer response.Body.Close()
+
+	// // Decode the JSON response into a Chapters struct
+	// var rsp meta.Chapters
+	// if err := json.NewDecoder(response.Body).Decode(&rsp); err != nil {
+	// 	return meta.Chapters{}, fmt.Errorf("error decoding response: %w", err)
+	// }
+
+	// // Return the chapters
+	// return rsp, nil
+
+}
+
+func (m Metadata) ToString() string {
+
+	return fmt.Sprintf("ASIN:      %s\nTitle:     %s\nAuthor:    %s\nSeries:    %s\nPosition:  %f\nPublisher: %s\nDuration:  %s", m.ASIN, m.Title, m.Author, m.Series.Name, m.Series.Position, m.Publisher, m.Duration.ToString())
+
 }
