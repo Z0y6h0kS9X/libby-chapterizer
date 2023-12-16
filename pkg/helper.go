@@ -4,16 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-	// prov "Z0y6h0kS9X/libby-chapterizer/provider"
+	"unicode/utf8"
 )
 
 var (
@@ -21,112 +19,56 @@ var (
 	narratorRegex = regexp.MustCompile(`^n(arrator|rt)?$`)
 )
 
-func FormatDuration(seconds float64) string {
-
-	lengthRaw := time.Duration(seconds) * time.Second
-	length := fmt.Sprintf("%02d:%02d:%02d.%03d",
-		int(lengthRaw.Hours()),
-		int(lengthRaw.Minutes())%60,
-		int(lengthRaw.Seconds())%60,
-		int(lengthRaw.Milliseconds()))
-
-	length = strings.TrimRight(length, "0")
-
-	return length
-
+type ChapterInfo struct {
+	ID         int
+	Title      string
+	Start      int
+	Duration   int
+	FilePath   string
+	FileLength Duration
 }
 
-func GetComplexDuration(file1 string, file1Start, file2End float64) (string, error) {
-
-	file1Duration, err := GetFileDuration(file1)
-	if err != nil {
-		log.Println("Error getting file1 duration:", err)
-		return "", err
+// GetFileNameAndMilliseconds splits the path to extract the file name and milliseconds, if applicable.
+// It takes a path string as input and returns the part string and milli integer.
+func GetFileNameAndMilliseconds(path string) (string, int) {
+	// Split the path to extract the file name and start time, if applicable.
+	regex := `Fmt\d+-`
+	leadingRegex := regexp.MustCompile(regex)
+	if leadingRegex.MatchString(path) {
+		regexMatch := leadingRegex.FindString(path)
+		padCharsLength := utf8.RuneCountInString(regexMatch)
+		path = path[strings.Index(path, regexMatch)+padCharsLength:]
 	}
 
-	// Calculates duration using file duration and start time
-	duration1 := file1Duration - file1Start
+	// Split the Part from the start (Seconds).
+	var part string
+	var milli int
+	tempStr := strings.Split(path, "#")
+	if len(tempStr) > 1 {
+		part = tempStr[0]
+		tempFloat, err := strconv.ParseFloat(tempStr[1], 64)
 
-	// file 2 will always start as 0, so no need to get duration, it will be whatever file2End is
-	duration2 := file2End
-
-	// Adds the duration of the 2 file pieces together
-	duration := duration1 + duration2
-
-	// Formats the duration
-	durationFormatted := FormatDuration(duration)
-
-	return durationFormatted, nil
-}
-
-func GetSimpleDuration(start, end float64) (string, error) {
-
-	lengthRaw := end - start
-	length := FormatDuration(lengthRaw)
-
-	return length, nil
-}
-
-func GetFileNameAndSeconds(path string) (string, float64) {
-	fileName := ""
-	seconds := 0.000
-
-	// Discard everything up to and including 'Fmt425-'
-	index := strings.Index(path, "Fmt425-")
-	if index != -1 {
-		path = path[index+len("Fmt425-"):]
-	}
-
-	// Split on '#', if it exists
-	if strings.Contains(path, "#") {
-		parts := strings.Split(path, "#")
-		fileName = parts[0]
-		seconds, _ = strconv.ParseFloat(parts[1], 64)
+		if err != nil {
+			fmt.Println("Error Parsing to Float\n\n", err)
+			return "", 0
+		}
+		tempInt := int(tempFloat * 1000)
+		milli = tempInt
 	} else {
-		fileName = path
+		part = path
+		milli = 0
 	}
 
-	return fileName, seconds
+	return part, milli
 }
 
-func GetPartFromMp3File(mp3File string) string {
-
-	part := ""
-	index := (strings.Index(mp3File, "-Part") - 4)
-	if index != -1 {
-		part = mp3File[index+len("-Part"):]
-	}
-
-	return part
-}
-
-func GetBitRate(path string) (int, error) {
-	// ffprobe -v error -show_entries format=bit_rate -of default=noprint_wrappers=1 input.mp3
-	cmd := exec.Command("ffprobe", "-v", "error", "-show_entries", "format=bit_rate", "-of", "default=noprint_wrappers=1:nokey=1", path)
-
-	output, err := cmd.Output()
-	if err != nil {
-		fmt.Println("Error:", err)
-		return 0, err
-	}
-
-	// Trim whitespace from the output
-	output = []byte(strings.TrimSpace(string(output)))
-
-	// Parse the output to an integer
-	bitRate, err := strconv.Atoi(string(output))
-	if err != nil {
-		fmt.Println("Error parsing bit rate:", err)
-		return 0, err
-	}
-
-	return bitRate, nil
-}
-
+// NormalizeName normalizes a filename by replacing special characters with hyphens.
 func NormalizeName(filename string) string {
-
+	// Use strings.Map to iterate over each rune in the filename
+	// and replace special characters with hyphens
 	outputFileNormal := strings.Map(func(r rune) rune {
 		switch {
+		// Replace special characters with hyphens
 		case r == '<' || r == '>' || r == ':' || r == '"' || r == '/' || r == '\\' || r == '|' || r == '?' || r == '*':
 			return '-'
 		default:
@@ -135,30 +77,27 @@ func NormalizeName(filename string) string {
 	}, filename)
 
 	return outputFileNormal
-
 }
 
-func GetOutputDirPath(details BookDetails, asin, outPath string) (string, error) {
+// GetOutputDirPath generates the output directory path based on the metadata, ASIN, and the output path.
+// It follows certain rules to format the output name and normalize the fields.
+func GetOutputDirPath(meta Metadata, asin, outPath string) (string, error) {
 
 	// Adds the first author, series name, and title to the path
-	outName := details.Title
+	outName := meta.Title
 	if asin != "" {
 		outName = outName + " (" + asin + ")"
 	}
 
-	if details.SeriesPrimary.Position != "" {
-		floatNumber, err := strconv.ParseFloat(details.SeriesPrimary.Position, 64)
-		if err != nil {
-			fmt.Println("Error parsing float:", err)
-		}
-		padded := fmt.Sprintf("%04.1f", floatNumber)
+	if meta.Series.Position != 0.0 {
+		padded := fmt.Sprintf("%04.1f", meta.Series.Position)
 		outName = "[" + padded + "]. " + outName
 	}
 
 	// Normalizes the fields
 	outName = NormalizeName(outName)
-	seriesName := NormalizeName(details.SeriesPrimary.Name)
-	author := NormalizeName(details.Authors[0].Name)
+	seriesName := NormalizeName(meta.Series.Name)
+	author := NormalizeName(meta.Author)
 
 	outputDir := path.Join(outPath, author, seriesName, outName)
 
@@ -166,58 +105,21 @@ func GetOutputDirPath(details BookDetails, asin, outPath string) (string, error)
 
 }
 
-func GetBookDetailsNoASIN(book Openbook) (BookDetails, error) {
-
-	details := BookDetails{}
-
-	// Create an author object
-	author := struct {
-		Asin string `json:"asin,omitempty"`
-		Name string `json:"name,omitempty"`
-	}{
-		Asin: "",
-		Name: GetPrimaryAuthor(book),
-	}
-
-	// Create a narrator object
-	narrator := struct {
-		Name string `json:"name,omitempty"`
-	}{
-		Name: GetPrimaryNarrator(book),
-	}
-
-	// Set the details
-	details.Authors = []struct {
-		Asin string `json:"asin,omitempty"`
-		Name string `json:"name,omitempty"`
-	}{author}
-
-	details.Narrators = []struct {
-		Name string `json:"name,omitempty"`
-	}{narrator}
-
-	details.Title = book.Title.Main
-	details.SeriesPrimary.Name = book.Title.Collection
-	details.Subtitle = book.Title.Subtitle
-	details.Description = book.Description.Full
-
-	return details, nil
-
-}
-
+// GetPrimaryAuthor returns the primary author of a book.
 func GetPrimaryAuthor(book Openbook) string {
 
 	var authors []string
 
-	// Get the primary author
+	// Iterate through the creators of the book
 	for _, creator := range book.Creator {
+		// Check if the creator's role matches the author regular expression
 		if authorRegex.MatchString(creator.Role) {
+			// Add the creator's name to the list of authors
 			authors = append(authors, creator.Name)
-			continue
 		}
 	}
 
-	// Return the first author
+	// Return the first author in the list
 	if len(authors) == 0 {
 		return ""
 	} else {
@@ -226,36 +128,26 @@ func GetPrimaryAuthor(book Openbook) string {
 
 }
 
+// GetPrimaryNarrator returns the primary narrator of a book.
 func GetPrimaryNarrator(book Openbook) string {
-
+	// Create a slice to store the narrators
 	var narrators []string
 
-	// Get the primary narrator
+	// Iterate through the creators of the book
 	for _, creator := range book.Creator {
+		// Check if the creator has a role that matches the narrator regex
 		if narratorRegex.MatchString(creator.Role) {
+			// Add the creator's name to the narrators slice
 			narrators = append(narrators, creator.Name)
 		}
 	}
 
-	// Return the first narrator
+	// Return the first narrator in the slice
 	if len(narrators) == 0 {
 		return ""
 	} else {
 		return narrators[0]
 	}
-
-}
-
-func GetTimeBreakdown(input int) (hours, minutes, seconds, milliseconds int) {
-
-	// Calculate hours, minutes, seconds, and milliseconds
-	hours = (input / (1000 * 60 * 60)) % 24
-	minutes = (input / (1000 * 60)) % 60
-	seconds = (input / 1000) % 60
-	milliseconds = input % 1000
-
-	// Returns the values
-	return hours, minutes, seconds, milliseconds
 }
 
 // GetAllMp3Files returns a list of all the .mp3 files in the given directory and its subdirectories.
@@ -280,72 +172,44 @@ func GetAllMp3Files(path string) ([]string, error) {
 	return mp3Files, nil
 }
 
-func GenerateChapterBlock(file, title string, duration, lastTimeMS int) string {
-
-	// Gets the start time of the file
-	start := lastTimeMS
-	end := start + duration
-
-	// Creates the chapter block
-	chapterBlock := fmt.Sprintf("[CHAPTER]\nTIMEBASE=1/1000\nSTART=%d\nEND=%d\ntitle=%s\n", start, end, title)
-
-	// Returns the chapter block
-	return chapterBlock
-
-}
-
+// JSONFileToOpenBook reads a JSON file and returns an Openbook struct.
+// It takes the path to the JSON file as input and returns the Openbook struct
+// and an error if any.
 func JSONFileToOpenBook(jsonPath string) (Openbook, error) {
+	openBook := Openbook{} // Creates a new Openbook
 
-	// Creates a new Openbook
-	openBook := Openbook{}
-
-	// Imports JSON files
-	file, err := os.Open(jsonPath)
+	file, err := os.Open(jsonPath) // Opens the JSON file
 	if err != nil {
 		fmt.Println("Error opening file:", err)
 		return openBook, err
 	}
 	defer file.Close()
 
-	// Reads the file
-	data, err := io.ReadAll(file)
+	data, err := io.ReadAll(file) // Reads the file
 	if err != nil {
 		fmt.Println("Error reading file:", err)
 		return openBook, err
 	}
 
-	// Unmarshals JSON
-	err = json.Unmarshal(data, &openBook)
+	err = json.Unmarshal(data, &openBook) // Unmarshals JSON
 	if err != nil {
 		fmt.Println("Error unmarshalling JSON:", err)
 		return openBook, err
 	}
 
 	return openBook, nil
-
 }
 
-// func GetTitleFromFilename(filename string) string {
-
-// 	// Discard everything up to and including 'Fmt425-'
-// 	index := strings.Index(filename, "Fmt425-")
-// 	title := ""
-// 	if index != -1 {
-// 		title = filename[index+len("Fmt425-"):]
-// 	}
-
-// 	return title
-
-// }
-
-// Needs rework
+// CalculateDuration calculates the duration in hours, minutes, seconds, and milliseconds
+// based on the given number of milliseconds.
 func CalculateDuration(milliseconds int) Duration {
-
-	// Creates a new Duration object
+	// Create a new Duration object
 	duration := Duration{}
+
+	// Convert milliseconds to time.Duration
 	temp := time.Duration(milliseconds) * time.Millisecond
 
-	// Sets duration properties
+	// Set duration properties
 	duration.Hours = int(temp.Hours())
 	duration.Minutes = int(temp.Minutes()) % 60
 	duration.Seconds = int(temp.Seconds()) % 60
@@ -354,6 +218,6 @@ func CalculateDuration(milliseconds int) Duration {
 	duration.TotalSeconds = int(temp.Seconds())
 	duration.TotalMilliseconds = milliseconds
 
-	// returns duration
+	// Return duration
 	return duration
 }

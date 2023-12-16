@@ -24,6 +24,9 @@ type Product struct {
 // GetBook queries the Audible API to retrieve a book's ASIN based on its title, author, and narrator.
 func GetBook(title, author, narrator string, duration int) (string, error) {
 
+	// Lookup the book by title, author, narrator & duration
+	fmt.Println("Looking up Book ASIN...")
+
 	// Create the ASIN
 	var asin string
 
@@ -127,23 +130,34 @@ func GetBookDetailsASIN(asin string) (meta.BookDetails, error) {
 // GetChapters retrieves the chapters for a given ASIN.
 // It makes an HTTP GET request to the audnex API and decodes the response into a Chapters struct.
 // The ASIN is used to construct the request URL.
-func GetChapters(asin string) (meta.Chapters, error) {
+func GetAudibleChapters(asin string) ([]meta.Chapter, error) {
+
+	// Generates the chapters
+	var chapters []meta.Chapter
+
+	// Check if the ASIN is empty
+	if asin == "" {
+		return chapters, nil
+	}
+
 	// Construct the request URL
 	requestURL := fmt.Sprintf("https://api.audnex.us/books/%s/chapters", asin)
 
 	// Send an HTTP GET request to the API
 	response, err := http.Get(requestURL)
 	if err != nil {
-		return meta.Chapters{}, fmt.Errorf("error making request: %w", err)
+		return chapters, fmt.Errorf("error making request: %w", err)
 	}
 	defer response.Body.Close()
 
 	// Decode the JSON response into a Chapters struct
 	var rsp meta.Chapters
 	if err := json.NewDecoder(response.Body).Decode(&rsp); err != nil {
-		return meta.Chapters{}, fmt.Errorf("error decoding response: %w", err)
+		return chapters, fmt.Errorf("error decoding response: %w", err)
 	}
 
+	chapters = rsp.Chapters
+
 	// Return the chapters
-	return rsp, nil
+	return chapters, nil
 }
