@@ -3,6 +3,7 @@ package provider
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"net/url"
 
@@ -21,7 +22,14 @@ type Product struct {
 }
 
 // GetBook queries the Audible API to retrieve a book's ASIN based on its title, author, and narrator.
-func GetBook(title, author, narrator string) (string, error) {
+func GetBook(title, author, narrator string, duration int) (string, error) {
+
+	// Lookup the book by title, author, narrator & duration
+	fmt.Println("Looking up Book ASIN...")
+
+	// Create the ASIN
+	var asin string
+
 	// Create URL parameters
 	params := url.Values{
 		"num_results":      {"10"},
@@ -40,21 +48,60 @@ func GetBook(title, author, narrator string) (string, error) {
 	// Send HTTP GET request
 	response, err := http.Get(requestURL)
 	if err != nil {
-		return "", fmt.Errorf("error making request: %w", err)
+		return asin, fmt.Errorf("error making request: %w", err)
 	}
 	defer response.Body.Close()
 
 	var rsp Response
 	if err := json.NewDecoder(response.Body).Decode(&rsp); err != nil {
-		return "", fmt.Errorf("error decoding response: %w", err)
+		return asin, fmt.Errorf("error decoding response: %w", err)
 	}
 
 	// Check if any books were found
 	if len(rsp.Products) == 0 {
-		return "", nil
+		fmt.Println("No books found")
+		return asin, nil
+
+	} else if len(rsp.Products) > 1 {
+
+		// Goes through each, performing an Audnexus API call for each to match the duration
+		m := make(map[string]int)
+		for _, item := range rsp.Products {
+			details, err := GetBookDetailsASIN(item.ASIN)
+			if err != nil {
+				return asin, fmt.Errorf("error getting book details: %w", err)
+			}
+
+			// If there is an exact match, return the ASIN - else store it in a map
+			if details.RuntimeLengthMin == duration {
+				fmt.Println("Exact match found!")
+				return item.ASIN, nil
+			} else {
+				m[item.ASIN] = details.RuntimeLengthMin
+			}
+
+		}
+
+		for a, runtime := range m {
+			// Gets difference between duration and runtime
+			diff := math.Abs(float64(duration - runtime))
+			if diff <= 2 {
+				fmt.Println("Close match found!, duration differs by less than 2 minutes")
+				fmt.Println("ASIN: ", a)
+				fmt.Println("Runtime: ", runtime)
+				fmt.Println("Duration: ", duration)
+				fmt.Println("Difference: ", diff)
+				asin = a
+				break
+			}
+		}
+
 	} else {
-		return rsp.Products[0].ASIN, nil
+		// Only 1 book was found
+		asin = rsp.Products[0].ASIN
 	}
+
+	return asin, nil
 
 }
 
@@ -83,23 +130,34 @@ func GetBookDetailsASIN(asin string) (meta.BookDetails, error) {
 // GetChapters retrieves the chapters for a given ASIN.
 // It makes an HTTP GET request to the audnex API and decodes the response into a Chapters struct.
 // The ASIN is used to construct the request URL.
-func GetChapters(asin string) (meta.Chapters, error) {
+func GetAudibleChapters(asin string) ([]meta.Chapter, error) {
+
+	// Generates the chapters
+	var chapters []meta.Chapter
+
+	// Check if the ASIN is empty
+	if asin == "" {
+		return chapters, nil
+	}
+
 	// Construct the request URL
 	requestURL := fmt.Sprintf("https://api.audnex.us/books/%s/chapters", asin)
 
 	// Send an HTTP GET request to the API
 	response, err := http.Get(requestURL)
 	if err != nil {
-		return meta.Chapters{}, fmt.Errorf("error making request: %w", err)
+		return chapters, fmt.Errorf("error making request: %w", err)
 	}
 	defer response.Body.Close()
 
 	// Decode the JSON response into a Chapters struct
 	var rsp meta.Chapters
 	if err := json.NewDecoder(response.Body).Decode(&rsp); err != nil {
-		return meta.Chapters{}, fmt.Errorf("error decoding response: %w", err)
+		return chapters, fmt.Errorf("error decoding response: %w", err)
 	}
 
+	chapters = rsp.Chapters
+
 	// Return the chapters
-	return rsp, nil
+	return chapters, nil
 }

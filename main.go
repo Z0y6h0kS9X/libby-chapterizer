@@ -3,15 +3,10 @@ package main
 import (
 	p "Z0y6h0kS9X/libby-chapterizer/pkg"
 	prov "Z0y6h0kS9X/libby-chapterizer/provider"
-	"encoding/json"
 	"fmt"
-	"io"
-	"log"
 	"os"
-	"os/exec"
 	"path"
-	"strconv"
-	"strings"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
@@ -30,119 +25,148 @@ var jsonPath string
 var outPath string
 var test bool
 var audibleChapters bool
+var single bool
+var format string
 
 func init() {
 	rootCmd.Flags().StringVarP(&jsonPath, "json", "j", "", "The path to the openbook.json file")
 	rootCmd.Flags().StringVarP(&outPath, "out", "o", "", "The path to the directory you want to output the files to")
 	rootCmd.Flags().BoolVarP(&test, "test", "t", false, "Test mode")
 	rootCmd.Flags().BoolVarP(&audibleChapters, "use-audible-chapters", "c", false, "Specifies to override default breaks and use audible markers instead")
+	rootCmd.Flags().BoolVarP(&single, "single", "s", false, "Indicates if you want the output as a single file, or sepearate files for each chapter")
+	rootCmd.Flags().StringVarP(&format, "format", "f", "mp3", "What format you want the output in (mp3|m4b)")
 }
 
 func main() {
-	// fmt.Println("Hello, World!")
 
+	// Parses the flags
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	// Imports JSON files
-	file, err := os.Open(jsonPath)
-	if err != nil {
-		fmt.Println("Error opening file:", err)
-		return
-	}
-	defer file.Close()
-
-	// Reads the file
-	data, err := io.ReadAll(file)
-	if err != nil {
-		fmt.Println("Error reading file:", err)
-		return
+	// Checks to see if the jsonPath was specified
+	if jsonPath == "" {
+		fmt.Println("Error: path to openbook.json was not specified")
+		os.Exit(1)
 	}
 
-	// Unmarshals JSON
-	var book p.Openbook
-	err = json.Unmarshal(data, &book)
-	if err != nil {
-		fmt.Println("Error unmarshalling JSON:", err)
-		return
+	// Checks to see if the jsonPath is valid
+	_, err := os.Stat(jsonPath)
+	if os.IsNotExist(err) {
+		fmt.Println("Error: path to openbook.json is not valid")
+		os.Exit(1)
+	} else if err != nil {
+		fmt.Println("Error!:", err)
+		os.Exit(1)
 	}
 
-	// var authors []string
-	// var narrators []string
-	// var authorRegex = regexp.MustCompile(`^aut(hor)?$`)
-	// var narratorRegex = regexp.MustCompile(`^n(arrator|rt)?$`)
+	// Gets the directory path from the json path, converst to *nix path (if windows)
+	jsonPath = filepath.ToSlash(jsonPath)
+	jsonDir := path.Dir(jsonPath)
 
-	// for _, creator := range book.Creator {
-	// 	if authorRegex.MatchString(creator.Role) {
-	// 		authors = append(authors, creator.Name)
-	// 	} else if narratorRegex.MatchString(creator.Role) {
-	// 		narrators = append(narrators, creator.Name)
-	// 	}
-	// }
+	// Checks to see if the outPath was specified
+	if outPath == "" {
+		outPath = jsonDir
+	}
 
-	// authorString := strings.Join(authors, ", ")
-	// narratorString := strings.Join(narrators, ", ")
+	// Checks to see if the outPath is valid
+	_, err = os.Stat(outPath)
+	if os.IsNotExist(err) {
+		// Create path if it doesn't exist
+		err = os.MkdirAll(outPath, os.ModePerm)
+		if err != nil {
+			fmt.Println("Error creating output path:", err)
+			os.Exit(1)
+		}
+	} else if err != nil {
+		fmt.Println("Error:", err)
+		os.Exit(1)
+	}
 
+	// Gets the directory path from the json path, converst to *nix path (if windows)
+	outPath = filepath.ToSlash(outPath)
+
+	// Checks the output format specified is valid
+	if format != "mp3" && format != "m4b" {
+		fmt.Println("Error: output format must be 'mp3' or 'm4b'")
+		os.Exit(1)
+	}
+
+	// Converts the JSON file to an Openbook
+	book, err := p.JSONFileToOpenBook(jsonPath)
+	if err != nil {
+		fmt.Println("Error: Unable to convert JSON file to Openbook!\n", err)
+		os.Exit(1)
+	}
+
+	// Gets the primary author and narrator
 	author := p.GetPrimaryAuthor(book)
 	narrator := p.GetPrimaryNarrator(book)
 
-	// Gets the directory path from the json path
-	var fileDir string
-	if strings.Contains(jsonPath, "/") {
-		fileDir = path.Dir(jsonPath)
-	} else {
-		jsonPath = strings.Replace(jsonPath, "\\", "/", -1)
-		fileDir = path.Dir(jsonPath)
-	}
-
-	fmt.Println("Looking up Book ASIN...")
-
 	// Gets the ASIN
-	asin, err := prov.GetBook(book.Title.Main, author, narrator)
+	asin, err := prov.GetBook(book.Title.Main, author, narrator, book.CalculateRuntime())
 	if err != nil {
 		fmt.Println("Error getting book:", err)
-		return
+		os.Exit(1)
 	}
 
-	details := p.BookDetails{}
+	// var details p.BookDetails
+	var metadata p.Metadata
 	// If there is no ASIN, create details manually using openbook
 	if asin == "" {
-		fmt.Println("No ASIN found")
 
-		details, err = p.GetBookDetailsNoASIN(book)
-
-		// Prints the details
-		fmt.Println("Details:")
-		fmt.Println("Title:", details.Title)
-		fmt.Println("Author:", details.Authors[0].Name)
-		fmt.Println("Narrator:", details.Narrators[0].Name)
-		fmt.Println("Series:", details.SeriesPrimary.Name)
-		fmt.Println("Subtitle:", details.Subtitle)
+		metadata, err = p.GetMetadataLocal(book)
+		if err != nil {
+			fmt.Println("Error getting metadata (No ASIN):", err)
+			os.Exit(1)
+		}
 
 	} else {
-		fmt.Println("ASIN:", asin)
-		// Gets the book details
-		details, err = prov.GetBookDetailsASIN(asin)
+		metadata, err = p.GetMetadataFromASIN(asin)
 		if err != nil {
-			fmt.Println("Error getting book details:", err)
-			return
+			fmt.Println("Error getting metadata (ASIN):", err)
+			os.Exit(1)
 		}
 	}
 
-	// Checks if the user specified an output path
-	var outDir string
-	if outPath != "" {
-		outDir = strings.Replace(outPath, "\\", "/", -1)
-	} else {
-		outDir = fileDir
-	}
-
-	// Gets the output dir path
-	outputPath, err := p.GetOutputDirPath(details, asin, outDir)
+	outputPath, err := p.GetOutputDirPath(metadata, asin, outPath)
 	if err != nil {
 		fmt.Println("Error getting output dir path:", err)
+		return
+	}
+
+	// Prints the book details
+	fmt.Println("=================== Book Details ====================")
+	fmt.Println("Author:", author)
+	fmt.Println("Narrator:", narrator)
+	fmt.Println("Directory:", jsonDir)
+	fmt.Println("Output Directory:", outPath)
+	fmt.Println("Output Path:", outputPath)
+	fmt.Println("Format:", format)
+	if asin != "" {
+		fmt.Println("ASIN:", asin)
+	} else {
+		fmt.Println("ASIN: Book does not have an ASIN")
+	}
+	if single {
+		fmt.Println("Output Type: Single File")
+	} else {
+		fmt.Println("Output Type: Multiple Files")
+	}
+	if audibleChapters {
+		fmt.Println("Audible Chapters: Enabled")
+	} else {
+		fmt.Println("Audible Chapters: Disabled")
+	}
+	fmt.Println("=====================================================")
+
+	// ------------ Starts Destructive Code ------------
+
+	// Gets a list of all the .mp3 files in the jsonDir
+	files, err := p.GetAllMp3Files(jsonDir)
+	if err != nil {
+		fmt.Println("Error getting list of .mp3 files:", err)
 		return
 	}
 
@@ -155,243 +179,95 @@ func main() {
 		}
 	}
 
-	// Gets a list of all the .mp3 files in the fileDir
-	files, err := os.ReadDir(fileDir)
-	if err != nil {
-		fmt.Println("Error reading directory:", err)
-		return
-	}
-
-	mp3FileMap := make(map[string]string)
-	totalDuration := 0.000
-	var mp3Files []string
-
-	for _, file := range files {
-		if path.Ext(file.Name()) == ".mp3" {
-
-			fullPath := path.Join(fileDir, file.Name())
-			// mp3Files = append(mp3Files, fullPath)
-			part := p.GetPartFromMp3File(fullPath)
-			mp3FileMap[part] = fullPath
-
-			duration, err := p.GetFileDuration(fullPath)
-			if err != nil {
-				fmt.Println("Error getting file duration:", err)
-				return
-			}
-			totalDuration += duration
-
-			// If use-audible-chapters flag is set, add the full path to the array for later processing
-			if audibleChapters {
-				mp3Files = append(mp3Files, fullPath)
-			}
-		}
-	}
-
-	duration := p.FormatDuration(totalDuration)
-
-	fmt.Println("============================")
-	fmt.Println("Audiobook Information")
-	fmt.Println("----------------------------")
-	fmt.Println("Title:", book.Title.Main)
-	fmt.Println("ASIN:", asin)
-	if details.SeriesPrimary.Name != "" {
-		fmt.Println("Series:", details.SeriesPrimary.Name)
-		fmt.Println("Book Number:", details.SeriesPrimary.Position)
-	}
-	fmt.Println("Author:", author)
-	fmt.Println("Narrator:", narrator)
-	fmt.Println("Duration:", duration)
-	fmt.Println("============================")
-
-	if test {
-		fmt.Println("Test mode enabled. Exiting...")
-		os.Exit(0)
-
-	}
-
-	var ProcessBlock []p.Process
-
-	var tempFile string
-
+	// Check if the user wants to use audible chapters or not
+	var chapters []p.Chapter
 	if audibleChapters {
-
-		// Set the output path for the combined MP3 file
-		fileName := fmt.Sprintf("%s (%s)", p.NormalizeName(book.Title.Main), asin)
-		tempFile = path.Join(outputPath, fileName+".mp3")
-
-		// Call the MakeCombinedMP3 function to create the combined MP3 file
-		err = p.MakeCombinedMP3(mp3Files, tempFile)
+		chapters, err = prov.GetAudibleChapters(metadata.ASIN)
 		if err != nil {
-			fmt.Println("Error making combined MP3:", err)
-			return
+			fmt.Println("Error getting audible chapters:", err)
+			os.Exit(1)
 		}
 
-		chapters, err := prov.GetChapters(asin)
-		if err != nil {
-			fmt.Println("Error getting chapters:", err)
-			return
-		}
-
-		for i, chapter := range chapters.Chapters {
-
-			title := chapter.Title
-			start, _ := strconv.ParseFloat(strconv.Itoa(chapter.StartOffsetMs/1000), 64)
-			dur, _ := strconv.ParseFloat(strconv.Itoa(chapter.LengthMs/1000), 64)
-			end := start + dur
-
-			process := p.Process{}
-
-			cmd, err := p.GetSimpleSplit(tempFile, start, end)
+		if chapters == nil {
+			fmt.Println("No audible chapters found, using local chapters")
+			chapters, err = p.GetChaptersLocal(book, files)
 			if err != nil {
-				fmt.Println("Error getting simple split:", err)
-				return
+				fmt.Println("Error getting local chapters:", err)
+				os.Exit(1)
+			}
+		}
+	} else {
+		chapters, err = p.GetChaptersLocal(book, files)
+		if err != nil {
+			fmt.Println("Error getting local chapters:", err)
+			os.Exit(1)
+		}
+	}
+
+	metadata.Chapters = chapters
+
+	// Check if the output will be a single file or not
+	if single {
+
+		var outputFile string
+		if asin == "" {
+			outputFile = path.Join(outputPath, fmt.Sprintf("%s.%s", metadata.Title, format))
+		} else {
+			outputFile = path.Join(outputPath, fmt.Sprintf("%s (%s).%s", metadata.Title, asin, format))
+		}
+
+		if format == "mp3" {
+
+			// Output single mp3, with limited metadata
+			p.MakeCombinedMP3(files, metadata, outputFile)
+
+		} else {
+			fmt.Println("Making single m4b file")
+
+			ffmetadata := metadata.ToFFMPEGMetadata()
+
+			// Create the file
+			file, err := os.Create(outputPath + "/ffmetadata.txt")
+			if err != nil {
+				fmt.Println("Error creating ffmetadata file:", err)
+				os.Exit(1)
+			}
+			defer file.Close()
+
+			// Writes the contents of ffmetadata out to the file
+			_, err = file.WriteString(ffmetadata)
+			if err != nil {
+				fmt.Println("Error writing ffmetadata file:", err)
+				os.Exit(1)
 			}
 
-			// Normalizes the title
-			outputFileNormal := p.NormalizeName(title)
-			iteration := fmt.Sprintf("%02d", i)
-
-			process.Source = tempFile
-			process.Start = start
-			process.End = end
-			process.Duration = p.FormatDuration(dur)
-			process.Title = title
-			process.Command = cmd
-			process.Output = path.Join(outputPath, "["+iteration+"]. "+outputFileNormal+".mp3")
-
-			ProcessBlock = append(ProcessBlock, process)
+			// Output single m4b with metadata
+			err = p.MakeCombinedM4B(files, outputPath+"/ffmetadata.txt", outputFile)
+			if err != nil {
+				fmt.Println("Error making single m4b file:", err)
+				os.Exit(1)
+			}
 
 		}
 
 	} else {
 
-		for i, toc := range book.Nav.Toc {
-
-			process := p.Process{}
-			part, seconds := p.GetFileNameAndSeconds(toc.Path)
-
-			switch mp3File := mp3FileMap[part]; {
-			case mp3File != "":
-				process.Source = mp3File
-			default:
-				log.Fatalf("Part not found: %s", part)
+		//
+		if format == "mp3" {
+			// Output split mp3s
+			err = p.MakeSplitMP3Files(files, chapters, metadata, outputPath)
+			if err != nil {
+				fmt.Println("Error making split mp3 files:\n", err)
+				os.Exit(1)
 			}
-
-			var cmd *exec.Cmd
-			var dur string
-
-			if i < len(book.Nav.Toc)-1 {
-				toc2 := book.Nav.Toc[i+1]
-				part2, seconds2 := p.GetFileNameAndSeconds(toc2.Path)
-
-				if part != part2 {
-					if seconds2 == 0 {
-						seconds2, err = p.GetFileDuration(process.Source)
-						if err != nil {
-							log.Fatalf("Error getting duration: %v", err)
-						}
-						dur, err = p.GetSimpleDuration(seconds, seconds2)
-						if err != nil {
-							log.Fatalf("Error getting duration: %v", err)
-						}
-						cmd, err = p.GetSimpleSplit(process.Source, seconds, seconds2)
-						if err != nil {
-							log.Fatalf("Error getting command: %v", err)
-						}
-					} else {
-						dur, err = p.GetComplexDuration(process.Source, seconds, seconds2)
-						if err != nil {
-							log.Fatalf("Error getting duration: %v", err)
-						}
-						cmd, err = p.GetComplexSplit(process.Source, mp3FileMap[part2], seconds, seconds2)
-						if err != nil {
-							log.Fatalf("Error getting command: %v", err)
-						}
-					}
-				} else {
-					cmd, err = p.GetSimpleSplit(process.Source, seconds, seconds2)
-					if err != nil {
-						log.Fatalf("Error getting command: %v", err)
-					}
-					dur, err = p.GetSimpleDuration(seconds, seconds2)
-					if err != nil {
-						log.Fatalf("Error getting duration: %v", err)
-					}
-				}
-
-				process.End = seconds2
-			} else if i == len(book.Nav.Toc)-1 {
-				process.End, err = p.GetFileDuration(process.Source)
-				if err != nil {
-					fmt.Println("Error getting file duration:", err)
-					os.Exit(1)
-				}
-
-				cmd, err = p.GetSimpleSplit(process.Source, seconds, process.End)
-				if err != nil {
-					fmt.Println("Error getting command:", err)
-					os.Exit(1)
-				}
-
-				dur, err = p.GetSimpleDuration(seconds, process.End)
-				if err != nil {
-					fmt.Println("Error getting duration:", err)
-					os.Exit(1)
-				}
+		} else {
+			// Output split m4bs
+			err = p.MakeSplitM4BFiles(files, chapters, metadata, outputPath)
+			if err != nil {
+				fmt.Println("Error making split m4b files:\n", err)
+				os.Exit(1)
 			}
-
-			// Normalizes the title
-			outputFileNormal := p.NormalizeName(toc.Title)
-			iteration := fmt.Sprintf("%02d", i)
-
-			// Adds the Process object properties
-			process.Title = toc.Title
-			process.Start = seconds
-			process.Duration = dur
-			process.Command = cmd
-			process.Output = path.Join(outputPath, "["+iteration+"]. "+outputFileNormal+".mp3")
-
-			// Adds the process to the ProcessBlock
-			ProcessBlock = append(ProcessBlock, process)
 		}
 
 	}
-
-	// Runs the commands to generate the output files
-	var m3u []string
-	m3u = append(m3u, "#EXTM3U")
-	m3u = append(m3u, fmt.Sprintf("#PLAYLIST: %s", book.Title.Main))
-
-	for _, process := range ProcessBlock {
-
-		_, file := path.Split(process.Output)
-
-		fmt.Printf("Processing Item: %s (%s)\n", process.Title, process.Duration)
-		newCmd := process.Command
-		newCmd.Args = append(newCmd.Args, process.Output)
-
-		output, err := newCmd.CombinedOutput()
-		if err != nil {
-			fmt.Println("Error running command:", err)
-			fmt.Println("Command Output: ", string(output))
-			return
-		}
-
-		m3u = append(m3u, fmt.Sprintf("#EXTINF:,%s\n%s", process.Title, file))
-
-	}
-
-	content := strings.Join(m3u, "\n")
-	err = os.WriteFile(path.Join(outputPath, p.NormalizeName(book.Title.Main)+".m3u"), []byte(content), 0644)
-	if err != nil {
-		fmt.Println("Error writing file:", err)
-		return
-	}
-
-	// removes the tempFile if it exists
-	if _, err := os.Stat(tempFile); err == nil {
-		os.Remove(tempFile)
-	}
-
 }
