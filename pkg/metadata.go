@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -286,7 +287,12 @@ func GetMetadataFromASIN(asin string) (Metadata, error) {
 		}
 		metadata.Series.Name = seriesName
 
-		metadata.Series.Position, err = strconv.ParseFloat(fmt.Sprint(seriesObj["position"]), 64)
+		// Some metadata positions are labeled with a leading word (e.g. Eragon - 'Book 1'), selects only the numbers
+		posRegex := regexp.MustCompile(`\d+(\.\d+)?`)
+		number := posRegex.FindAllString(fmt.Sprint(seriesObj["position"]), 1)
+
+		// Converts the number to a float
+		metadata.Series.Position, err = strconv.ParseFloat(number[0], 64)
 		if err != nil {
 			return metadata, fmt.Errorf("error decoding series position")
 		}
