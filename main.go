@@ -210,10 +210,11 @@ func main() {
 	if single {
 
 		var outputFile string
+		title := p.NormalizeName(metadata.Title)
 		if asin == "" {
-			outputFile = path.Join(outputPath, fmt.Sprintf("%s.%s", metadata.Title, format))
+			outputFile = path.Join(outputPath, fmt.Sprintf("%s.%s", title, format))
 		} else {
-			outputFile = path.Join(outputPath, fmt.Sprintf("%s (%s).%s", metadata.Title, asin, format))
+			outputFile = path.Join(outputPath, fmt.Sprintf("%s (%s).%s", title, asin, format))
 		}
 
 		if format == "mp3" {
