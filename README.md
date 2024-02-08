@@ -28,9 +28,10 @@ Currently the program will take the source mp3 files, alongside the openbook.jso
 - [x] Parse JSON
 - [x] Split based on openbook splits
 - [ ] Generate M3U file
+- [ ] Fallback to use ISBN and pull metadata from that, if No ASIN or if specified
 - [x] Convert mp3 files into chapterized M4b (optional)
 - [x] Look up book in Audible to pull metadata
-- [ ] Write metadata to m4b file
+- [x] Write metadata to m4b file
 
 ## Usage
 
