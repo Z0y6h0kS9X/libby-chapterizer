@@ -291,11 +291,16 @@ func GetMetadataFromASIN(asin string) (Metadata, error) {
 		posRegex := regexp.MustCompile(`\d+(\.\d+)?`)
 		number := posRegex.FindAllString(fmt.Sprint(seriesObj["position"]), 1)
 
-		// Converts the number to a float
-		metadata.Series.Position, err = strconv.ParseFloat(number[0], 64)
-		if err != nil {
-			return metadata, fmt.Errorf("error decoding series position")
+		// Converts the number to a float, if position is supplied (Ballad of Songbirds & Snakes has no position)
+		if len(number) != 0 {
+
+			metadata.Series.Position, err = strconv.ParseFloat(number[0], 64)
+			if err != nil {
+				return metadata, fmt.Errorf("error decoding series position")
+			}
+
 		}
+
 	}
 
 	// Gets the publisher and assigns it
